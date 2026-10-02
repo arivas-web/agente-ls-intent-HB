@@ -63,3 +63,23 @@ def test_horarios_madrid():
     assert in_window(["mon", "tue"], "09:00", "18:00", datetime(2026, 10, 6, 17, 59, tzinfo=mad))
     assert not in_window(["mon", "tue"], "09:00", "18:00", datetime(2026, 10, 6, 18, 0, tzinfo=mad))
     assert not in_window(["mon"], "09:00", "18:00", datetime(2026, 10, 10, 10, 0, tzinfo=mad))   # sábado
+
+
+def test_interes_principal():
+    from datetime import datetime, timedelta, timezone
+    from vt.assign.data import top_interest
+    now = datetime.now(timezone.utc)
+    sigs = [{"at": now, "meta": {"producto": "suite", "vertical": "aduanas"}},
+            {"at": now - timedelta(days=2), "meta": {"producto": "suite"}},
+            {"at": now - timedelta(days=3), "meta": {"producto": "vforwarding", "vertical": "transitarios"}},
+            {"at": now - timedelta(days=90), "meta": {"producto": "otros", "vertical": "otros"}}]
+    assert top_interest(sigs) == {"producto": "suite", "vertical": "aduanas"}
+    assert top_interest([]) == {"producto": None, "vertical": None}
+
+
+def test_proximo_lunes():
+    from datetime import date, datetime
+    from zoneinfo import ZoneInfo
+    from vt.assign.draft import next_monday
+    assert next_monday(datetime(2026, 10, 1, 9, tzinfo=ZoneInfo("Europe/Madrid"))) == date(2026, 10, 5)   # jueves
+    assert next_monday(datetime(2026, 10, 5, 9, tzinfo=ZoneInfo("Europe/Madrid"))) == date(2026, 10, 12)  # lunes -> siguiente

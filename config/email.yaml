@@ -9,3 +9,4 @@ recipients:
   alerts: [arivas@visualtrans.com]
   notices: [arivas@visualtrans.com]
   monthly_report: [arivas@visualtrans.com]
+dashboard_url: null          # URL del dashboard en Vercel (se añade al desplegarlo)
