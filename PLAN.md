@@ -7,7 +7,8 @@ Fecha: 2026-10-02.
 
 | Tema | Decisión |
 |---|---|
-| Base de datos | Supabase (Postgres) |
+| Base de datos | Supabase (Postgres), proyecto `bmudirnikpgcqfieyueq` (URL en `config/database.yaml`; la contraseña va solo en `DATABASE_URL`) |
+| Claude | Suscripción Claude Pro, **sin API de pago**. Se usa Claude Code en modo no interactivo (`claude -p`) en GitHub Actions con un token OAuth de suscripción (`CLAUDE_CODE_OAUTH_TOKEN`, generado con `claude setup-token`) |
 | Email | Gmail por SMTP con contraseña de aplicación (gratis, sin dominio que verificar). Límite ~500 envíos/día, de sobra |
 | Destinatario y remitente | Todo a `arivas@visualtrans.com`, enviado desde `arivas@visualms.com` (ambos en `config/email.yaml`) |
 | Envío semanal | **Lunes 08:00 (España)**, solo si la semana está validada |
@@ -150,6 +151,7 @@ Tests: cada puntuación, normalización de URLs (ya existe `tests/test_url_scori
 | Casado Venzo con falsos positivos | Orden CIF > dominio > nombre; dudas a informe de revisión, nunca asumidas |
 | Datos comerciales en logs | Logs sin nombres ni emails; Actions con `::add-mask::`; repositorio privado; el CSV no se imprime |
 | Claude devuelve JSON inválido | Esquema estricto, validación, 2 reintentos; si falla, la cuenta va sin texto y se marca |
+| Límites de uso de Claude Pro (ventanas de 5 h y tope semanal compartido con tu uso manual) | La carga es pequeña (20 cuentas/semana + disparadores A/B + clasificaciones puntuales). Un solo proceso por vez, caché por hash de entrada, reintento diferido y aviso por email si se agota. El token OAuth puede caducar o revocarse: aviso por email si falla la autenticación |
 | Coste de Claude | Resúmenes solo para el borrador (20 cuentas por semana), disparadores solo A y B una vez por semana, caché por hash de entrada |
 | Límites de la API de HubSpot (100 req/10 s) | Lectura por lotes y reintentos con espera |
 | Pesos mal calibrados | El informe mensual solo propone; nunca se aplican solos |
@@ -157,9 +159,15 @@ Tests: cada puntuación, normalización de URLs (ya existe `tests/test_url_scori
 | Cuentas sin actividad en 6 meses | Asignación aleatoria y grupo de control; la semilla se guarda para reproducirlo |
 | Pérdida del envío semanal | Si no está validado el lunes a las 08:00, no se envía y llega un aviso |
 
+## 8b. Claude sin API: cómo se adapta
+- `src/vt/claude/` llama a `claude -p --output-format json` con un esquema JSON estricto y valida la salida; si no valida, reintenta (máx. 2).
+- Sin herramientas salvo la búsqueda web en los disparadores externos. Si la búsqueda no está disponible con la suscripción, los disparadores externos se desactivan por YAML (los pesos quedan sin usar).
+- Las funciones que no necesitan Claude (puntuaciones, reparto, alertas) no dependen de él: si Claude falla, el borrador sale igual, sin resúmenes, y te lo aviso.
+- A verificar al empezar la Fase 3: que el uso programado de una suscripción Pro desde Actions esté permitido en sus condiciones y aguante la carga. Si no, plan B: ejecutar la capa de Claude manualmente desde una sesión de Claude Code y guardar el JSON en Supabase.
+
 ## 9. Secretos
 
-`HUBSPOT_TOKEN`, `ANTHROPIC_API_KEY`, `DATABASE_URL`, `GMAIL_USER` (arivas@visualms.com), `GMAIL_APP_PASSWORD`, `DASHBOARD_PASSWORD` (GitHub Actions y Vercel según corresponda).
+`HUBSPOT_TOKEN`, `CLAUDE_CODE_OAUTH_TOKEN`, `DATABASE_URL` (usar la cadena del *connection pooler* de Supabase: los runners de GitHub son solo IPv4 y la conexión directa de Supabase es IPv6), `GMAIL_USER` (arivas@visualms.com), `GMAIL_APP_PASSWORD`, `DASHBOARD_PASSWORD` (GitHub Actions y Vercel según corresponda).
 Para Gmail hay que activar la verificación en dos pasos en la cuenta de envío y crear una contraseña de aplicación.
 
 ## 10. Pendiente de ti antes de implementar

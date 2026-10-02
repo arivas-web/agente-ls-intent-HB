@@ -1,0 +1,4 @@
+# Supabase (no secreto). La contraseña va solo en el secreto DATABASE_URL.
+provider: supabase
+project_url: https://bmudirnikpgcqfieyueq.supabase.co
+project_ref: bmudirnikpgcqfieyueq
