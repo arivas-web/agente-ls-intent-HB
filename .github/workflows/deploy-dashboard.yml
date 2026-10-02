@@ -1,7 +1,7 @@
 name: deploy-dashboard
-# Despliega el dashboard en Vercel con un token (evita el bloqueo de Vercel Hobby por el autor del commit).
-# Requiere: secretos VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID, y en el proyecto de Vercel: Root Directory = dashboard
-# y variables NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY.
+# Despliega el dashboard en Vercel con un token, SIN importar el repositorio en Vercel ni depender del autor del commit.
+# Secretos necesarios: VERCEL_TOKEN y NEXT_PUBLIC_SUPABASE_ANON_KEY (clave "anon" de Supabase, pública por diseño).
+# Opcionales: VERCEL_ORG_ID y VERCEL_PROJECT_ID (si el proyecto ya existe). Si no, se crea el proyecto "vt-dashboard".
 on:
   workflow_dispatch:
   push:
@@ -17,12 +17,14 @@ jobs:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      SUPABASE_URL: https://bmudirnikpgcqfieyueq.supabase.co
+      SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
     steps:
       - name: Comprobar secretos
         id: chk
         run: |
-          if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_ORG_ID" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
-            echo "Faltan VERCEL_TOKEN / VERCEL_ORG_ID / VERCEL_PROJECT_ID: no se despliega."; echo "go=false" >> "$GITHUB_OUTPUT"
+          if [ -z "$VERCEL_TOKEN" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "Faltan VERCEL_TOKEN y/o NEXT_PUBLIC_SUPABASE_ANON_KEY: no se despliega."; echo "go=false" >> "$GITHUB_OUTPUT"
           else echo "go=true" >> "$GITHUB_OUTPUT"; fi
       - uses: actions/checkout@v4
         if: steps.chk.outputs.go == 'true'
@@ -31,9 +33,15 @@ jobs:
         with: {node-version: "20"}
       - name: Desplegar
         if: steps.chk.outputs.go == 'true'
+        working-directory: dashboard
         run: |
           npm install --global vercel@latest
+          if [ -z "$VERCEL_ORG_ID" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
+            vercel link --yes --project vt-dashboard --token="$VERCEL_TOKEN"
+          fi
+          printf '%s' "$SUPABASE_URL" | vercel env add NEXT_PUBLIC_SUPABASE_URL production --force --token="$VERCEL_TOKEN"
+          printf '%s' "$SUPABASE_ANON_KEY" | vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY production --force --token="$VERCEL_TOKEN"
           vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
           vercel build --prod --token="$VERCEL_TOKEN"
-          vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN" | tee deploy.txt
-          echo "URL: $(tail -n1 deploy.txt)"
+          vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN" | tee ../deploy.txt
+          echo "URL DEL DASHBOARD: $(tail -n1 ../deploy.txt)"

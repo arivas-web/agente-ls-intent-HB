@@ -55,8 +55,9 @@ Si el borrador está `enviado` o `no_enviado`, todo queda en solo lectura. Se av
 - Si el denominador es 0 se muestra "—".
 
 
-## Si Vercel no despliega (Hobby bloquea commits de otro autor)
-Opción A (recomendada): workflow `deploy-dashboard.yml` con token. Secretos de GitHub: `VERCEL_TOKEN` (Vercel > Settings > Tokens),
-`VERCEL_ORG_ID` y `VERCEL_PROJECT_ID` (en `.vercel/project.json` tras `vercel link`, o Project Settings > General).
-En el proyecto de Vercel: Root Directory = `dashboard` y las variables `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
-Opción B: desde tu ordenador, en la carpeta `dashboard`: `npx vercel --prod`.
+## Si Vercel no muestra el repositorio o no despliega
+Opción A (recomendada): workflow `deploy-dashboard.yml`, sin importar el repo en Vercel. Solo hacen falta dos secretos de GitHub:
+`VERCEL_TOKEN` (Vercel > Account Settings > Tokens) y `NEXT_PUBLIC_SUPABASE_ANON_KEY` (Supabase > Project Settings > API > anon public).
+Se crea el proyecto `vt-dashboard` y las variables de entorno solas. Actions > deploy-dashboard > Run workflow; la URL sale en el log.
+Opción B: desde tu ordenador, en esta carpeta: `npx vercel --prod`.
+Opción C: dar acceso al repo a Vercel (GitHub > Settings > Applications > Vercel > Configure > Repository access).
