@@ -1,0 +1,16 @@
+# Nombres internos de propiedades de HubSpot CONFIRMADOS por el usuario.
+# Regla: no añadir ni cambiar nada aquí sin confirmación. Si un nombre deja de
+# existir en la API, avisar; no buscar otro.
+company:
+  target_market: target_market          # confirmado 2026-10-02 (enumeración)
+  proveedor_actual: proveedores         # confirmado 2026-10-02 (enumeración; mapeo valor->puntos con coincidencia aproximada, ver config/fit.yaml)
+  ubicacion: pais                       # confirmado 2026-10-02 (enumeración)
+  estado_prospeccion: company___status  # confirmado 2026-10-02 (enumeración)
+  tipo_de_contacto: tipo_de_contacto    # confirmado 2026-10-02 (enumeración, EMPRESA); los contactos heredan la exclusión de su empresa. Valores a excluir: pendiente de confirmar
+contact:
+  cargo: cargo_icp                      # confirmado 2026-10-02 (enumeración; no hace falta clasificar con Claude)
+  telefono:                             # confirmado 2026-10-02 (todas las relacionadas salvo WhatsApp)
+    - mobilephone
+    - phone
+  linkedin_url: hs_linkedin_url         # confirmado 2026-10-02
+deal: {}
