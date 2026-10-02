@@ -1,0 +1,14 @@
+# cargo_icp (HubSpot) -> categoría
+cargo_categoria:
+  "CEO": ceo
+  "COO- Chief Operating Officer": coo_logistica
+  "Resp. Logistica": coo_logistica
+  "Director Informática": informatica
+  "Dpto. logística": dept_logistica
+  "Operativo": dept_logistica
+cargo_default: otros
+cargo_points: {ceo: 40, coo_logistica: 30, informatica: 20, dept_logistica: 10, otros: 0}
+engagement_max: 40
+engagement_saturation: 30            # SUPUESTO: puntos decaídos del contacto que dan el máximo
+contactabilidad: {telefono: 10, email_valido: 5, linkedin: 5}
+missing_decision_maker_min_cargo_points: 30

@@ -1,0 +1,33 @@
+half_life_days: 30
+# Puntos normalizados a 0-100: raw / saturation * 100, con tope 100.
+# saturation = SUPUESTO inicial, calibrar con datos reales (Fase 1).
+saturation: 60
+active_contact_min_points: 1.0       # puntos tras decaimiento para contar como contacto activo
+weights:
+  email_click: 3
+  email_open: 0
+  unsubscribe: -15
+  spam: -30
+  content_download: 8
+  webinar_registration: 5
+  webinar_attendance: 10
+  newsletter_subscription: 5
+  event_visit: 10
+  linkedin_like: 2
+  linkedin_comment: 5
+  linkedin_share: 6
+  linkedin_follow: 3
+caps_per_month:                      # por contacto y mes natural (solo puntos positivos)
+  email_click: 15
+  linkedin_like: 10
+  web_noticias: 10
+  _total: 40
+cargo_multiplier:
+  ceo: 1.5
+  coo_logistica: 1.3
+  informatica: 1.2
+  default: 1.0
+breadth_multiplier:                  # nº de contactos activos
+  1: 1.0
+  2: 1.3
+  3: 1.6                             # 3 o más

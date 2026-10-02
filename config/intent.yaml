@@ -1,0 +1,20 @@
+half_life_days: 14
+saturation: 50                       # SUPUESTO inicial, calibrar con datos reales
+tiers: {1: 50, 2: 20}                # 1 >= 50 · 2 20–49 · 3 < 20
+weights:
+  positive_reply: 25
+  multi_person_7d: 20
+  sessions_7d: 15
+  return_after_90d: 10
+  reactivation: 20
+  trigger_financiacion_licitacion: 15
+  trigger_contratacion_roles: 10
+  trigger_expansion_sede: 10
+  trigger_cambio_decisor: 10
+sessions_7d_min: 3
+multi_person_window_days: 7
+return_after_days: 90
+ruta_evaluacion_window_hours: 48
+ruta_evaluacion_a: [producto_principal, producto_detalle, productos_otros, vertical]
+ruta_evaluacion_b: [precios, demo, caso_exito_detalle, caso_exito_listado]
+freeze_days_no_interesa: 90

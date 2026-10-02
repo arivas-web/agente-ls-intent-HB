@@ -1,0 +1,72 @@
+# Fit de empresa. Modelo de la empresa: NO modificar los puntos.
+max_points: 43            # 30 + 8 + 5
+tiers: {A: 70, B: 45}     # A >= 70 · B 45–69 · C < 45
+
+target_market:            # valores internos de HubSpot (propiedad target_market)
+  "Transitario PYME": 30
+  "Transitario + Aduanas": 30
+  "Consignatarios PYME": 30
+  "Aduanas PYME": 20
+  "Depósito aduanero": 15
+  "Shipper/ Consignee": 15                                   # Cargadores
+  "Operador logístico PYME (transitario terrestre +almacén)": 15
+  "Transporte terrestre": 5
+  "Agencia de transportes": 5
+  "Courier": 5
+  "Otros": 0
+  "Asociaciones del sector": 0
+  "Centro de formación": 0
+
+proveedor:                # puntos por proveedor (clave = nombre canónico)
+  "Solución a medida": 8
+  "Sin solución": 8
+  "Excel": 8
+  "Solución propia": 5
+  "Solport": 4
+  "Taric Trans": 4
+  "Esymat": 3
+  "S4": 3
+  "Wintrans": 3
+  "Bytemaster": -2
+  "Click & Cargo": -4
+  "Cargowise": -8
+  "Dependencia central": -15
+proveedor_otro: 0
+# Valores de HubSpot que se escriben distinto o parecido -> proveedor canónico.
+# La comparación normaliza mayúsculas, tildes, URLs y símbolos.
+proveedor_alias:
+  "No tienen solución": "Sin solución"
+  "Solución propia / Dept. IT": "Solución propia"
+  "Esimat": "Esymat"
+  "Click&cargo": "Click & Cargo"
+  "Taric": "Taric Trans"
+  "Dependencia central": "Dependencia central"
+# Se informan como "sin casar" para que decidas (puntúan proveedor_otro = 0):
+# Sol. central extranjero, Desconocido, Otros y el resto de proveedores no listados.
+proveedor_umbral_similitud: 0.88
+
+ubicacion:                # propiedad pais
+  "España": 5
+  "México": 2
+  "Portugal": 1
+  otros_latam: 1
+  otro: 0
+latam:
+  - Argentina
+  - Bolivia
+  - Brasil
+  - Chile
+  - Colombia
+  - Costa Rica
+  - Cuba
+  - Ecuador
+  - El Salvador
+  - Guatemala
+  - Honduras
+  - Nicaragua
+  - Panamá
+  - Paraguay
+  - Perú
+  - República Dominicana
+  - Uruguay
+  - Venezuela

@@ -1,0 +1,10 @@
+# fit_tier + intent_tier -> acción
+actions:
+  A1: llamar
+  A2: llamar
+  B1: llamar
+  A3: nutrir_abm          # no llamar
+  B2: espera              # NO definido en la especificación: no se reparte (confirmar)
+  B3: espera              # idem
+  C: fuera                # C en cualquier nivel de intención
+order: [A1, A2, B1]       # orden de prioridad para el reparto

@@ -1,52 +1,65 @@
-import re, yaml
-from urllib.parse import urlparse
-cfg = yaml.safe_load(open('url_scoring.yaml'))
-rules = cfg['reglas']; norm = cfg['normalizacion']
+import pytest
+from vt.scoring.url_rules import score_url, normalize
 
-def normalize(url):
-    path = urlparse(url.lower()).path or '/'
-    if not path.endswith('/'): path += '/'
-    path = norm['alias'].get(path, path)
-    d = norm['quitar_sufijo_duplicado']
-    if re.search(d['aplicar_en'], path): path = re.sub(d['patron'], d['reemplazo'], path)
-    return path
+B = "https://visualtrans.com"
 
-def score(url):
-    p = normalize(url)
-    for r in rules:
-        m = re.search(r['patron'], p)
-        if m:
-            extra = ''
-            for k in ('guardar_interes_producto','guardar_interes_vertical'):
-                if k in r: extra = f" [{k.split('_')[-1]}={m.expand(r[k].replace('$1',chr(92)+'1'))}]"
-            return p, r['id'], r['bloque'], r['puntos'], extra
+# (url, regla esperada, bloque, puntos) — resultados del script original (versión 1 del YAML)
+CASES = [
+    ("/", "home", "engagement", 1),
+    ("/precios/", "precios", "intencion", 20),
+    ("/precios", "precios", "intencion", 20),
+    ("/PRECIOS/?utm_source=linkedin&utm_campaign=x", "precios", "intencion", 20),
+    ("/solicita-tu-demo/", "demo", "intencion", 15),
+    ("/contactar-2/", "contacto", "intencion", 12),
+    ("/kit-digital/", "financiacion", "intencion", 10),
+    ("/info-verifactu/", "normativa_con_plazo", "intencion", 10),
+    ("/productos/suite/verifactu/", "normativa_con_plazo", "intencion", 10),
+    ("/productos/suite/verifactu/declaracion-responsable-suite/", "declaracion_responsable", "intencion", 3),
+    ("/casos-de-exito/", "caso_exito_listado", "intencion", 8),
+    ("/casos-de-exito/moldtrans/", "caso_exito_detalle", "intencion", 10),
+    ("/clientes/", "clientes", "intencion", 8),
+    ("/deiworld/", "integraciones", "intencion", 8),
+    ("/productos/", "catalogo_productos", "intencion", 5),
+    ("/productos/suite/", "producto_principal", "intencion", 8),
+    ("/productos/suite/modulos/integracion-web/", "producto_detalle", "intencion", 6),
+    ("/productos/otros/vnotify/", "productos_otros", "intencion", 6),
+    ("/transitarios-2/", "vertical", "intencion", 6),
+    ("/empresa/internacional/", "empresa", "intencion", 3),
+    ("/productos/suite/novedades/suite-26-07/", "novedades_producto", "engagement", 2),
+    ("/recursos-incoterms-la-guia-definitiva/", "guia_recurso", "engagement", 3),
+    ("/recursos/", "hub_recursos", "engagement", 2),
+    ("/noticias/", "indice_noticias", "engagement", 1),
+    ("/noticias/cmo-elegir-un-software-logstico/", "noticia_comparativa_compra", "intencion", 6),
+    ("/noticias/visual-trans-webinar-verifactu/", "noticia_webinar_evento", "engagement", 3),
+    ("/noticias/visual-trans-suite-26-07-nuevo-dossier-con-ia/", "noticia_novedad_producto", "engagement", 2),
+    ("/noticias/weco-maritima-confia-en-visual-trans/", "noticia_caso_cliente", "intencion", 4),
+    ("/noticias/aduana-del-guadalquivir-implanta-la-suite-visual-trans-2/", "noticia_caso_cliente", "intencion", 4),
+    ("/noticias/dca-digital-como-llegar-preparado-al-5-de-octubre-de-2026/", "noticia_normativa", "engagement", 2),
+    ("/noticias/la-inteligencia-artificial-en-el-sector-logstico/", "noticia_divulgativa", "engagement", 1),
+    ("/noticias/feliz-navidad/", "por_defecto", "ninguno", 0),
+    ("/legal/", "por_defecto", "ninguno", 0),
+    ("/privacidad-2/", "por_defecto", "ninguno", 0),
+    ("/form-test/", "por_defecto", "ninguno", 0),
+]
 
-B='https://visualtrans.com'
-urls = """/ /precios/ /precios /PRECIOS/?utm_source=linkedin&utm_campaign=x /solicita-tu-demo/ /demo-visual-trans/
-/contactar/ /contactar-2/ /ayudas-y-subvenciones/ /kit-digital/ /documento-electronico-de-control-administrativo-deca/
-/autodespacho-inteligente/ /info-verifactu/ /productos/suite/verifactu/ /productos/vforwarding/verifactu/
-/productos/suite/verifactu/declaracion-responsable-suite/ /productos/suite/funcionalidades/declaracion-responsable-verifactu/
-/productos/suite/funcionalidades/operativa-deca-en-visual-trans-suite/ /casos-de-exito/ /casos-de-exito/moldtrans/
-/clientes/ /integraciones/ /integraciones-webcargo/ /deiworld/ /productos/ /productos/suite/ /productos/vforwarding/
-/productos/empuries/ /productos/virtualdua/ /productos/tariff-code/ /productos/suite/modulos/ /productos/suite/modulos/integracion-web/
-/productos/vforwarding/funcionalidades/business-intelligence-vforwarding/ /productos/empuries/funcionalidades/intrastat/
-/productos/otros/ /productos/otros/vnotify/ /transitarios/ /transitarios-2/ /aduanas/ /operadores/ /consignatarios/ /cargadores/ /shippers/
-/empresa/ /empresa/internacional/ /about/ /productos/suite/novedades/suite-26-07/ /productos/virtualdua/novedades/
-/productos/suite/novedades/historico-de-novedades/ /novedades-vf-23-2/ /destacados/ /recursos-incoterms-la-guia-definitiva/
-/especiales-logistica-inteligente/ /recursos/ /biblioteca-de-recursos/ /incoterms/ /noticias/ /portal-noticias/
-/noticias/cmo-elegir-un-software-logstico/ /noticias/como-encontrar-software-logistica/ /noticias/software-erp-transitario/
-/noticias/valorar-software-agentes-carga/ /noticias/por-que-comprar-software-logistico-es-la-mejor-decision/
-/noticias/visual-trans-webinar-verifactu/ /noticias/webinar-consignatarios/ /noticias/visual-trans-estara-en-sil-2026-con-un-encuentro-sobre-logistica-inteligente/
-/noticias/visual-trans-vforwarding-261-bi-vforwarding-integrado/ /noticias/visual-trans-suite-26-07-nuevo-dossier-con-ia/
-/noticias/visual-trans-virtualdua-2404-exenciones-iva-arancel-mejoradas/ /noticias/aduana-del-guadalquivir-implanta-la-suite-visual-trans/
-/noticias/barcelona-cargo-opta-por-visual-trans-para-continuar-creciendo/ /noticias/weco-maritima-confia-en-visual-trans/
-/noticias/aduana-del-guadalquivir-implanta-la-suite-visual-trans-2/ /noticias/dca-digital-como-llegar-preparado-al-5-de-octubre-de-2026/
-/noticias/verifactu-y-factura-electrnica-para-empresas-logsticas/ /noticias/tipos-de-declaraciones-en-el-sistema-h1-pdi-dpa-dac-spa-y-sac-2025/
-/noticias/la-inteligencia-artificial-en-el-sector-logstico/ /noticias/huella-de-carbono-en-logistica-del-cumplimiento-al-valor-para-el-cliente/
-/noticias/feliz-navidad/ /noticias/el-puerto-de-vigo-crece-por-encima-de-la-media-nacional/ /noticias/importante-crecimiento-del-puerto-de-barcelona/
-/noticias/software-logistico-espana-270-millones-inversion/ /noticias/visual-ms-crece-un-87-en-2002/ /noticias/el-grupo-davila-celebro-el-90-aniversario-de-su-fundacion/
-/noticias/la-transitaria-saner-obtiene-la-certificacion-oea/ /noticias/derivados-y-activos/ /noticias/fruit-attraction-2016/
-/legal/ /privacidad-2/ /confirmacion-recepcion-formulario/ /centros-de-formacion/ /avisos-de-seguridad/ /form-test/""".split()
-for u in urls:
-    p,i,b,pts,x = score(B+u)
-    print(f"{pts:>3} {b:<10} {i:<28} {p}{x}")
+
+@pytest.mark.parametrize("path,rule,block,points", CASES)
+def test_score(url_cfg, path, rule, block, points):
+    r = score_url(B + path, url_cfg)
+    got = (("por_defecto" if r.rule_id == "sin_regla" else r.rule_id), r.block, r.points)
+    assert got == (rule, block, points)
+
+
+def test_normalizacion(url_cfg):
+    n = url_cfg["normalizacion"]
+    assert normalize(B + "/PRECIOS?utm=1", n) == "/precios/"
+    assert normalize(B + "/contactar-2/", n) == "/contactar/"
+    assert normalize(B + "/noticias/x-2/", n) == "/noticias/x/"
+    assert normalize(B + "/productos/suite-2/", n) == "/productos/suite-2/"   # solo en /noticias/
+
+
+def test_intereses(url_cfg):
+    r = score_url(B + "/productos/vforwarding/funcionalidades/x/", url_cfg)
+    assert r.producto == "vforwarding"
+    assert score_url(B + "/aduanas/", url_cfg).vertical == "aduanas"
+    assert score_url(B + "/precios/", url_cfg).alerta_si_fit == "A"
