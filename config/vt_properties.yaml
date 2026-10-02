@@ -1,0 +1,27 @@
+# Propiedades vt_ de EMPRESA que el sistema crea y rellena en HubSpot (nunca se borran).
+# Escritura: solo con --apply (o VT_HUBSPOT_APPLY=true en GitHub). Por defecto dry-run con log en change_log.
+group: companyinformation
+properties:
+  vt_fit_score:        {label: "VT Fit (0-100)", type: number, fieldType: number}
+  vt_fit_tier:         {label: "VT Fit nivel", type: enumeration, fieldType: select, options: [A, B, C]}
+  vt_engagement_score: {label: "VT Engagement (0-100)", type: number, fieldType: number}
+  vt_intent_score:     {label: "VT Intención (0-100)", type: number, fieldType: number}
+  vt_intent_tier:      {label: "VT Intención nivel", type: enumeration, fieldType: select, options: ["1", "2", "3"]}
+  vt_intent_velocity:  {label: "VT Velocidad de intención", type: number, fieldType: number}
+  vt_priority:         {label: "VT Prioridad", type: enumeration, fieldType: select,
+                        options: [A1, A2, A3, B1, B2, B3, C1, C2, C3]}
+  vt_best_contact:     {label: "VT Contacto recomendado", type: string, fieldType: text}
+  vt_missing_decision_maker: {label: "VT Falta decisor", type: enumeration, fieldType: booleancheckbox, options: ["true", "false"]}
+  vt_why_now:          {label: "VT Por qué ahora", type: string, fieldType: textarea}
+  vt_angle:            {label: "VT Ángulo y objeción", type: string, fieldType: textarea}
+  vt_ai_intent:        {label: "VT Intención (IA 1-5)", type: number, fieldType: number}
+  vt_ai_intent_reason: {label: "VT Motivo intención IA", type: string, fieldType: textarea}
+  vt_assigned_sdr:     {label: "VT SDR asignada", type: string, fieldType: text}
+  vt_assigned_week:    {label: "VT Semana asignada", type: string, fieldType: text}
+  vt_control_group:    {label: "VT Grupo de control", type: enumeration, fieldType: booleancheckbox, options: ["true", "false"]}
+  vt_last_alert_at:    {label: "VT Última alerta (fecha)", type: string, fieldType: text}
+  vt_last_alert_reason: {label: "VT Última alerta (motivo)", type: string, fieldType: text}
+  vt_call_outcome:     {label: "VT Resultado de llamada", type: enumeration, fieldType: select,
+                        options: ["no contesta", "no interesado", "mal timing", "ya tiene proveedor", "seguimiento", "reunión"]}
+  vt_interes_producto: {label: "VT Interés producto", type: string, fieldType: text}
+  vt_interes_vertical: {label: "VT Interés vertical", type: string, fieldType: text}

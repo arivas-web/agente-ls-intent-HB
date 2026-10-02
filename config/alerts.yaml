@@ -1,0 +1,8 @@
+window: {weekdays: [mon, tue, wed, thu, fri], from: "09:00", to: "18:00", tz: Europe/Madrid}
+fit_tiers: [A]                    # solo cuentas de fit A
+exclude_statuses: [Client, Discarded]
+lookback_hours: 26                # visitas de las últimas horas (evita alertar de actividad antigua)
+multi_contact_window_hours: 48
+multi_contact_min: 2
+high_intent_rules: [precios, demo]  # reglas de url_scoring.yaml que disparan alerta si es cuenta A
+dedupe_days: 7

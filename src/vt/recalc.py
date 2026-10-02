@@ -1,5 +1,4 @@
-"""Recálculo: 4 puntuaciones + matriz -> foto diaria en Supabase.
-Escritura en HubSpot: NO implementada aquí; solo se registra el plan de cambios (dry-run) en change_log."""
+"""Recálculo: 4 puntuaciones + matriz -> foto diaria en Supabase. No escribe en HubSpot (eso lo hace vt.hubspot.sync)."""
 import json
 import sys
 from collections import defaultdict
@@ -71,10 +70,7 @@ def main():
                              "from signals where occurred_at > now() - interval '400 days'"):
             sigs[r[0]].append(Signal(r[1], r[2], r[3], r[5], float(r[6]), r[4], r[0], r[7] or {}))
         frz = {r[0]: {"kind": r[1], "until": r[2]} for r in cur.execute("select company_hs_id,kind,until from freezes")}
-        prev = {r[0]: r[1:] for r in cur.execute(
-            "select company_hs_id,fit,fit_tier,engagement,intent,intent_tier,intent_velocity,priority,best_contact,missing_decision_maker "
-            "from company_scores_daily where date = (select max(date) from company_scores_daily where date < %s)", (today,))}
-        n = changes = 0
+        n = 0
         snap = Batch(conn, """insert into company_scores_daily(date,company_hs_id,fit,fit_tier,engagement,intent,intent_tier,
                    intent_velocity,priority,action,best_contact,missing_decision_maker,breakdown)
                    values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
@@ -86,8 +82,6 @@ def main():
         csnap = Batch(conn, """insert into contact_scores_daily(date,contact_hs_id,company_hs_id,persona,breakdown)
                    values (%s,%s,%s,%s,%s) on conflict (date,contact_hs_id) do update
                    set persona=excluded.persona, breakdown=excluded.breakdown""")
-        chg = Batch(conn, "insert into change_log(object_type,object_id,property,old_value,new_value,mode) "
-                          "values ('company',%s,%s,%s,%s,'dry-run')")
         cache = defaultdict(int)
         for co in cos:
             res = compute_company(co, cts.get(co["hs_id"], []), sigs.get(co["hs_id"], []), cfgs, now, frz.get(co["hs_id"]))
@@ -100,19 +94,11 @@ def main():
             snap.add((today, co["hs_id"], *row[:7], res["action"], row[7], row[8], json.dumps(breakdown, default=str)))
             for cid, pr in res["persona"].items():
                 csnap.add((today, cid, co["hs_id"], pr["score"], json.dumps(pr["breakdown"])))
-            # Plan de escritura a HubSpot: SOLO dry-run (registro de cambios vs. foto anterior).
-            old = prev.get(co["hs_id"])
-            for i, prop in enumerate(VT_PROPS):
-                o = None if old is None else _fmt(old[i])
-                nw = _fmt(row[i])
-                if o != nw:
-                    chg.add((co["hs_id"], prop, o, nw))
-                    changes += 1
             n += 1
             if n % 500 == 0:
-                snap.flush(); csnap.flush(); chg.flush(); conn.commit()
-        snap.flush(); csnap.flush(); chg.flush(); conn.commit()
-    print("empresas puntuadas:", n, "| cambios dry-run registrados:", changes)
+                snap.flush(); csnap.flush(); conn.commit()
+        snap.flush(); csnap.flush(); conn.commit()
+    print("empresas puntuadas:", n)
     print("distribución prioridad:", dict(sorted(cache.items())))
 
 

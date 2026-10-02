@@ -7,3 +7,8 @@ draft:  {weekday: thu, time: "09:00", tz: Europe/Madrid}   # supuesto, cambiable
 send:   {weekday: mon, time: "08:00", tz: Europe/Madrid}   # confirmado
 excluded_statuses: [Discarded, Client, Account, On prospection, Engaged, Contacted, Meeting]
 inactivity_months_for_control: 6
+control_per_sdr: 2               # SUPUESTO: de las 10 cuentas por SDR, 2 son grupo de control (aleatorias, sin actividad en 6 meses)
+control_min_fit_tier: B           # SUPUESTO: el grupo de control sale de cuentas de fit A o B (evita basura C)
+candidate_pool_size: 60           # candidatos ordenados que se guardan para "sustituir por la siguiente"
+random_seed_salt: "vt"            # la semilla = salt + fecha de la semana; se guarda para reproducir el sorteo
+excluded_company_types: [Asociaciones del sector, Cliente, Competencia, Partner, Prensa]

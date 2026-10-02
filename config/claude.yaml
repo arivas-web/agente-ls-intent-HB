@@ -1,0 +1,9 @@
+# Capa de Claude vía Claude Code en modo no interactivo (suscripción, sin API de pago).
+command: claude
+timeout_seconds: 180
+retries: 2
+max_chars:
+  vt_why_now: 450
+  vt_angle: 450
+  contact_justification: 300
+  vt_ai_intent_reason: 300
