@@ -2,6 +2,7 @@
 import json
 from datetime import datetime, timezone
 from ..config import load
+from ..db.batch import Batch
 from ..db.conn import connect
 from ..hubspot.client import HubSpotClient
 from .history import signals_from_history, parse_ts
@@ -24,23 +25,6 @@ def iter_objects(c, object_type, props, history=None, associations=None):
         after = ((body.get("paging") or {}).get("next") or {}).get("after")
         if not after:
             return
-
-
-class Batch:
-    """Acumula filas y las envía en lotes (executemany en modo pipeline): mucho más rápido que fila a fila."""
-    def __init__(self, conn, sql, size=500):
-        self.conn, self.sql, self.size, self.rows = conn, sql, size, []
-
-    def add(self, row):
-        self.rows.append(row)
-        if len(self.rows) >= self.size:
-            self.flush()
-
-    def flush(self):
-        if self.rows:
-            with self.conn.cursor() as cur:
-                cur.executemany(self.sql, self.rows)
-            self.rows = []
 
 
 CO_SQL = """insert into companies(hs_id,name,domain,target_market,proveedor,pais,status,tipo_de_contacto,last_activity_at,updated_at)

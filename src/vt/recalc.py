@@ -5,6 +5,7 @@ import sys
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from .config import load
+from .db.batch import Batch
 from .db.conn import connect
 from .scoring.fit import fit_score
 from .scoring.engagement import engagement_score
@@ -12,6 +13,16 @@ from .scoring.intent import intent_score, intent_velocity
 from .scoring.matrix import priority
 from .scoring.persona import persona_score, best_contact, missing_decision_maker
 from .scoring.signals import Signal
+
+def _fmt(x):
+    """Compara valores de forma estable (Decimal de la BD vs float calculado)."""
+    if isinstance(x, bool) or x is None or isinstance(x, str):
+        return None if x is None else str(x)
+    try:
+        return f"{float(x):.1f}"
+    except (TypeError, ValueError):
+        return str(x)
+
 
 VT_PROPS = ["vt_fit_score", "vt_fit_tier", "vt_engagement_score", "vt_intent_score", "vt_intent_tier",
             "vt_intent_velocity", "vt_priority", "vt_best_contact", "vt_missing_decision_maker"]
@@ -64,6 +75,19 @@ def main():
             "select company_hs_id,fit,fit_tier,engagement,intent,intent_tier,intent_velocity,priority,best_contact,missing_decision_maker "
             "from company_scores_daily where date = (select max(date) from company_scores_daily where date < %s)", (today,))}
         n = changes = 0
+        snap = Batch(conn, """insert into company_scores_daily(date,company_hs_id,fit,fit_tier,engagement,intent,intent_tier,
+                   intent_velocity,priority,action,best_contact,missing_decision_maker,breakdown)
+                   values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                   on conflict (date,company_hs_id) do update set fit=excluded.fit, fit_tier=excluded.fit_tier,
+                   engagement=excluded.engagement, intent=excluded.intent, intent_tier=excluded.intent_tier,
+                   intent_velocity=excluded.intent_velocity, priority=excluded.priority, action=excluded.action,
+                   best_contact=excluded.best_contact, missing_decision_maker=excluded.missing_decision_maker,
+                   breakdown=excluded.breakdown""")
+        csnap = Batch(conn, """insert into contact_scores_daily(date,contact_hs_id,company_hs_id,persona,breakdown)
+                   values (%s,%s,%s,%s,%s) on conflict (date,contact_hs_id) do update
+                   set persona=excluded.persona, breakdown=excluded.breakdown""")
+        chg = Batch(conn, "insert into change_log(object_type,object_id,property,old_value,new_value,mode) "
+                          "values ('company',%s,%s,%s,%s,'dry-run')")
         cache = defaultdict(int)
         for co in cos:
             res = compute_company(co, cts.get(co["hs_id"], []), sigs.get(co["hs_id"], []), cfgs, now, frz.get(co["hs_id"]))
@@ -73,35 +97,21 @@ def main():
                    res["missing_decision_maker"])
             breakdown = {"fit": res["fit"]["breakdown"], "engagement": res["engagement"],
                          "intent": res["intent"], "action": res["action"]}
-            conn.execute(
-                """insert into company_scores_daily(date,company_hs_id,fit,fit_tier,engagement,intent,intent_tier,
-                   intent_velocity,priority,action,best_contact,missing_decision_maker,breakdown)
-                   values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-                   on conflict (date,company_hs_id) do update set fit=excluded.fit, fit_tier=excluded.fit_tier,
-                   engagement=excluded.engagement, intent=excluded.intent, intent_tier=excluded.intent_tier,
-                   intent_velocity=excluded.intent_velocity, priority=excluded.priority, action=excluded.action,
-                   best_contact=excluded.best_contact, missing_decision_maker=excluded.missing_decision_maker,
-                   breakdown=excluded.breakdown""",
-                (today, co["hs_id"], *row[:7], res["action"], row[7], row[8], json.dumps(breakdown, default=str)))
+            snap.add((today, co["hs_id"], *row[:7], res["action"], row[7], row[8], json.dumps(breakdown, default=str)))
             for cid, pr in res["persona"].items():
-                conn.execute(
-                    """insert into contact_scores_daily(date,contact_hs_id,company_hs_id,persona,breakdown)
-                       values (%s,%s,%s,%s,%s) on conflict (date,contact_hs_id) do update
-                       set persona=excluded.persona, breakdown=excluded.breakdown""",
-                    (today, cid, co["hs_id"], pr["score"], json.dumps(pr["breakdown"])))
+                csnap.add((today, cid, co["hs_id"], pr["score"], json.dumps(pr["breakdown"])))
             # Plan de escritura a HubSpot: SOLO dry-run (registro de cambios vs. foto anterior).
             old = prev.get(co["hs_id"])
             for i, prop in enumerate(VT_PROPS):
-                o = None if old is None else str(old[i])
-                nw = str(row[i])
+                o = None if old is None else _fmt(old[i])
+                nw = _fmt(row[i])
                 if o != nw:
-                    conn.execute("insert into change_log(object_type,object_id,property,old_value,new_value,mode) "
-                                 "values ('company',%s,%s,%s,%s,'dry-run')", (co["hs_id"], prop, o, nw))
+                    chg.add((co["hs_id"], prop, o, nw))
                     changes += 1
             n += 1
             if n % 500 == 0:
-                conn.commit()
-        conn.commit()
+                snap.flush(); csnap.flush(); chg.flush(); conn.commit()
+        snap.flush(); csnap.flush(); chg.flush(); conn.commit()
     print("empresas puntuadas:", n, "| cambios dry-run registrados:", changes)
     print("distribución prioridad:", dict(sorted(cache.items())))
 
