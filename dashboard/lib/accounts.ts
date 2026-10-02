@@ -9,8 +9,8 @@ export const INTERACTION: Record<string, string> = {
   "": "Cualquiera", "7d": "Con interacción en 7 días", "30d": "Con interacción en 30 días", none: "Sin interacción en 30 días",
 };
 /** Estados que no se muestran en Cuentas (cambiar aquí si hace falta). */
-export const HIDDEN_STATUSES = ["Account"];
-export const STATUSES = ["On Prospection", "Contacted", "Engaged", "Meeting", "Client", "Nurturing", "Delivered",
+export const HIDDEN_STATUSES: string[] = [];   // vacío: se muestran todos los estados
+export const STATUSES = ["On Prospection", "Contacted", "Engaged", "Meeting", "Account", "Client", "Nurturing", "Delivered",
   "On Hold", "Backlog", "Discarded", "Discovery", "Negociación", "Demo"];
 export const TARGETS = ["Transitario PYME", "Transitario + Aduanas", "Consignatarios PYME", "Aduanas PYME", "Depósito aduanero",
   "Shipper/ Consignee", "Operador logístico PYME (transitario terrestre +almacén)", "Transporte terrestre",
@@ -53,7 +53,7 @@ export interface Q {
 }
 export function applyFilters<T extends Q>(query: T, f: Filters): T {
   let x: Q = query;
-  x = x.or(`status.is.null,status.not.in.(${HIDDEN_STATUSES.join(",")})`);   // sin estado o distinto de los ocultos
+  if (HIDDEN_STATUSES.length) x = x.or(`status.is.null,status.not.in.(${HIDDEN_STATUSES.join(",")})`);
   if (f.q) x = x.or(`name.ilike.%${f.q}%,domain.ilike.%${f.q}%`);
   if (f.fit_tier) x = x.eq("fit_tier", f.fit_tier);
   if (f.priority) x = x.eq("priority", f.priority);

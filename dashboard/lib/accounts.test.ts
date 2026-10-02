@@ -16,13 +16,13 @@ describe("filtros de cuentas", () => {
     expect(f).toMatchObject({ sort: "intent", dir: "desc", page: 1, rising: false, inter: "" });
     const { q, calls } = recorder();
     applyFilters(q, f);
-    expect(calls).toEqual(["or status.is.null,status.not.in.(Account)"]);   // las cuentas "Account" nunca salen
+    expect(calls).toEqual([]);   // por defecto se muestran todos los estados, también Account
   });
   it("puntuación e interacción", () => {
     const f = parseFilters({ fit_tier: "A", intent_min: "x", int_min: "20", rising: "1", inter: "7d", visits_min: "2", contacts_min: "2", priority: "A1" });
     const { q, calls } = recorder();
     applyFilters(q, f);
-    expect(calls).toEqual(["or status.is.null,status.not.in.(Account)", "eq fit_tier=A", "eq priority=A1", "gte intent>=20", "gt intent_velocity>0", "gte signals_7d>=1", "gte visits_30d>=2", "gte active_contacts_30d>=2"]);
+    expect(calls).toEqual(["eq fit_tier=A", "eq priority=A1", "gte intent>=20", "gt intent_velocity>0", "gte signals_7d>=1", "gte visits_30d>=2", "gte active_contacts_30d>=2"]);
   });
   it("sin interacción y entradas inválidas se ignoran", () => {
     const f = parseFilters({ inter: "none", fit_tier: "Z", sort: "drop table", priority: "A9", fit_min: "abc", q: "a%,b(c)" });
@@ -30,7 +30,7 @@ describe("filtros de cuentas", () => {
     expect(f.sort).toBe("intent");
     const { q, calls } = recorder();
     applyFilters(q, f);
-    expect(calls).toEqual(["or status.is.null,status.not.in.(Account)", "or name.ilike.%a b c%,domain.ilike.%a b c%", "eq signals_30d=0"]);
+    expect(calls).toEqual(["or name.ilike.%a b c%,domain.ilike.%a b c%", "eq signals_30d=0"]);
   });
   it("la paginación conserva los filtros", () => {
     const f = parseFilters({ fit_tier: "B", rising: "1", p: "3" });
