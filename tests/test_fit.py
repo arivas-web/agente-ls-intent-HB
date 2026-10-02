@@ -48,3 +48,11 @@ def test_proveedor(fit_cfg, valor, canon, metodo):
 def test_ubicacion(fit_cfg):
     f = lambda p: fit_score(co(pais=p), fit_cfg)["breakdown"]["ubicacion"]["points"]
     assert (f("España"), f("México"), f("Portugal"), f("Chile"), f("Francia"), f("")) == (5, 2, 1, 1, 0, 0)
+
+
+def test_varios_proveedores_puntua_el_mas_penalizador(fit_cfg):
+    r = fit_score(co(prov="Solución propia / Dept. IT;Taric"), fit_cfg)
+    assert r["breakdown"]["proveedor"]["points"] == 4 and r["breakdown"]["proveedor"]["multiples"]
+    r = fit_score(co(prov="Dependencia central;Taric"), fit_cfg)
+    assert r["breakdown"]["proveedor"]["points"] == -15
+    assert fit_score(co(prov="Excel;Libra - Edisa"), fit_cfg)["breakdown"]["proveedor"]["points"] == 0

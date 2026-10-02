@@ -43,8 +43,14 @@ def fit_score(company, cfg):
     tm_pts = [(cfg["target_market"].get(t, 0), t) for t in tms]
     tm_points, tm_value = max(tm_pts, default=(0, None))
 
-    prov, how = match_proveedor(company.get("proveedor"), cfg)
-    prov_points = cfg["proveedor"][prov] if prov else cfg["proveedor_otro"]
+    # Proveedor: puede haber varios separados por ';'. Regla (config proveedor_multiple): min = el más penalizador.
+    parts = [x.strip() for x in (company.get("proveedor") or "").split(";") if x.strip()] or [None]
+    matched = []
+    for part in parts:
+        canon, how_one = match_proveedor(part, cfg)
+        matched.append((cfg["proveedor"][canon] if canon else cfg["proveedor_otro"], canon, how_one, part))
+    pick = min if cfg.get("proveedor_multiple", "min") == "min" else max
+    prov_points, prov, how, _ = pick(matched, key=lambda m: m[0])
 
     pais = (company.get("pais") or "").strip()
     ub = cfg["ubicacion"]
@@ -62,7 +68,8 @@ def fit_score(company, cfg):
         "score": round(score, 1), "tier": tier, "raw_points": total,
         "breakdown": {
             "target_market": {"value": tm_value, "points": tm_points},
-            "proveedor": {"value": company.get("proveedor"), "canonico": prov, "metodo": how, "points": prov_points},
+            "proveedor": {"value": company.get("proveedor"), "canonico": prov, "metodo": how, "points": prov_points,
+                          "multiples": len(parts) > 1},
             "ubicacion": {"value": pais or None, "points": loc_points},
         },
     }

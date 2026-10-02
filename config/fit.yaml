@@ -44,6 +44,8 @@ proveedor_alias:
 # Se informan como "sin casar" para que decidas (puntúan proveedor_otro = 0):
 # Sol. central extranjero, Desconocido, Otros y el resto de proveedores no listados.
 proveedor_umbral_similitud: 0.88
+# Si una empresa tiene varios proveedores (separados por ';'): min = puntúa el más penalizador (SUPUESTO, confirmar), max = el mejor.
+proveedor_multiple: min
 
 ubicacion:                # propiedad pais
   "España": 5
