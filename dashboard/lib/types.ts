@@ -133,3 +133,13 @@ export interface CallOutcome {
   at: string;
   outcome: string | null;
 }
+
+/** Fila de la vista company_overview (empresa + última puntuación + interacción reciente). */
+export interface CompanyOverview {
+  hs_id: string; name: string | null; domain: string | null; target_market: string | null; proveedor: string | null;
+  pais: string | null; status: string | null; last_activity_at: string | null; score_date: string | null;
+  fit: number | null; fit_tier: string | null; engagement: number | null; intent: number | null; intent_tier: number | null;
+  intent_velocity: number | null; priority: string | null; action: string | null; missing_decision_maker: boolean | null;
+  last_signal_at: string | null; signals_7d: number; signals_30d: number; visits_30d: number;
+  email_clicks_30d: number; active_contacts_30d: number;
+}
