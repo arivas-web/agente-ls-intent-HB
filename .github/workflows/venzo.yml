@@ -1,0 +1,20 @@
+name: venzo-load
+# Carga el CSV de Venzo más reciente de data/venzo/ al subir uno nuevo (o a mano). No imprime datos, solo recuentos.
+on:
+  push:
+    paths: ["data/venzo/**", "config/venzo_mapping.yaml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency: {group: vt-data, cancel-in-progress: false}
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12", cache: pip}
+      - run: pip install -r requirements.txt
+      - run: PYTHONPATH=src python -m vt.venzo.load

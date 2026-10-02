@@ -27,3 +27,10 @@ def at_hour(weekday, hour, now=None):
 
 def forced():
     return os.environ.get("FORCE") == "1"
+
+
+if __name__ == "__main__":
+    # Uso en workflows: `python -m vt.timeguard hour 3` imprime go=true/false según la hora de Madrid.
+    import sys
+    ok = len(sys.argv) == 3 and sys.argv[1] == "hour" and madrid_now().hour == int(sys.argv[2])
+    print(f"go={'true' if ok else 'false'}")

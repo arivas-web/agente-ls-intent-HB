@@ -13,3 +13,5 @@ columns:
   closed_at: null
   last_activity: null
   notes: null
+# Etapa/estado de Venzo -> abierta | ganada | perdida (completar con los valores reales del CSV)
+status_map: {}

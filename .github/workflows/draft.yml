@@ -1,0 +1,31 @@
+name: weekly-draft
+# Borrador del reparto de la semana siguiente: jueves 09:00 Madrid (07:00 UTC verano / 08:00 UTC invierno).
+on:
+  schedule:
+    - cron: "0 7 * * 4"
+    - cron: "0 8 * * 4"
+  workflow_dispatch:
+    inputs:
+      force: {description: "Ignorar la hora (FORCE=1)", type: boolean, default: false}
+permissions:
+  contents: read
+concurrency: {group: vt-data, cancel-in-progress: false}
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+      GMAIL_USER: ${{ secrets.GMAIL_USER }}
+      GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+      FORCE: ${{ inputs.force && '1' || '0' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12", cache: pip}
+      - run: pip install -r requirements.txt
+      - name: Instalar Claude Code (suscripción)
+        if: env.CLAUDE_CODE_OAUTH_TOKEN != ''
+        run: npm install -g @anthropic-ai/claude-code
+      - run: PYTHONPATH=src python -m vt.assign.draft

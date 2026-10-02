@@ -1,23 +1,33 @@
 name: daily-recalc
-# Ingesta (HubSpot solo lectura) + recálculo + foto diaria. NO escribe en HubSpot (solo dry-run en change_log).
-# El cron se activará tras revisar la Fase 1. España: 03:00 -> 01:00 UTC (verano) / 02:00 UTC (invierno).
-on: workflow_dispatch
+# Ingesta (HubSpot solo lectura) + recálculo + foto diaria + sync de propiedades vt_ (DRY-RUN salvo VT_HUBSPOT_APPLY=true).
+# 03:00 Madrid = 01:00 UTC (verano) / 02:00 UTC (invierno); el código decide con la hora de Madrid.
+on:
+  schedule:
+    - cron: "0 1 * * *"
+    - cron: "0 2 * * *"
+  workflow_dispatch:
 permissions:
   contents: read
+concurrency: {group: vt-data, cancel-in-progress: false}
 jobs:
   run:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      HUBSPOT_TOKEN: ${{ secrets.HUBSPOT_TOKEN }}
+      VT_HUBSPOT_APPLY: ${{ vars.VT_HUBSPOT_APPLY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: {python-version: "3.12", cache: pip}
       - run: pip install -r requirements.txt
-      - run: PYTHONPATH=src python -m vt.db.migrate
-        env: {DATABASE_URL: "${{ secrets.DATABASE_URL }}"}
-      - run: PYTHONPATH=src python -m vt.ingest.hubspot_ingest
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          HUBSPOT_TOKEN: ${{ secrets.HUBSPOT_TOKEN }}
-      - run: PYTHONPATH=src python -m vt.recalc
-        env: {DATABASE_URL: "${{ secrets.DATABASE_URL }}"}
+      - id: g
+        run: PYTHONPATH=src python -m vt.timeguard hour 3 >> "$GITHUB_OUTPUT"
+      - if: steps.g.outputs.go == 'true' || github.event_name == 'workflow_dispatch'
+        run: |
+          export PYTHONPATH=src
+          python -m vt.db.migrate
+          python -m vt.ingest.hubspot_ingest
+          python -m vt.recalc
+          python -m vt.hubspot.sync

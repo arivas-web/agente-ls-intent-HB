@@ -1,0 +1,22 @@
+name: hubspot-sync
+# Escribe las propiedades vt_ en HubSpot. DRY-RUN por defecto; escritura real solo marcando "apply".
+on:
+  workflow_dispatch:
+    inputs:
+      apply: {description: "Escribir de verdad en HubSpot (si no, dry-run)", type: boolean, default: false}
+permissions:
+  contents: read
+concurrency: {group: vt-data, cancel-in-progress: false}
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      HUBSPOT_TOKEN: ${{ secrets.HUBSPOT_TOKEN }}
+      VT_HUBSPOT_APPLY: ${{ inputs.apply && 'true' || 'false' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12", cache: pip}
+      - run: pip install -r requirements.txt
+      - run: PYTHONPATH=src python -m vt.hubspot.sync

@@ -5,6 +5,7 @@ from ..config import load
 from ..db.batch import Batch
 from ..db.conn import connect
 from ..hubspot.client import HubSpotClient
+from .outcomes import record_outcomes
 from .history import signals_from_history, parse_ts
 
 
@@ -51,7 +52,7 @@ def main():
     c = HubSpotClient()
 
     company_props = ["name", "domain", co["target_market"], co["proveedor_actual"], co["ubicacion"],
-                     co["estado_prospeccion"], co["tipo_de_contacto"]] + props_cfg["company_activity"]
+                     co["estado_prospeccion"], co["tipo_de_contacto"]] + props_cfg["company_activity"] + ["vt_call_outcome"]
     contact_props = ["email", ct["cargo"], *ct["telefono"], ct["linkedin_url"],
                      act["email_optout"], act["email_bounce"]]
     history = [act["last_url"], act["visits"], act["email_clicks"], act["email_optout"], act["email_last_replied"]]
@@ -59,20 +60,22 @@ def main():
     with connect() as conn:
         n_co = 0
         cob = Batch(conn, CO_SQL)
-        co_excluded = {}
+        co_excluded, outcomes = {}, {}
         for r in iter_objects(c, "companies", company_props):
             p = r["properties"]
             acts = [x for x in (p.get(k) for k in props_cfg["company_activity"]) if x]
             last = max((parse_ts(x) for x in acts), default=None)
             tipo = p.get(co["tipo_de_contacto"])
             co_excluded[r["id"]] = tipo in excluded_types
+            if p.get("vt_call_outcome"):
+                outcomes[r["id"]] = p["vt_call_outcome"]
             cob.add((r["id"], p.get("name"), p.get("domain"), p.get(co["target_market"]),
                      p.get(co["proveedor_actual"]), p.get(co["ubicacion"]), p.get(co["estado_prospeccion"]),
                      tipo, last))
             n_co += 1
         cob.flush()
+        print("empresas:", n_co, "| resultados de llamada nuevos:", record_outcomes(conn, outcomes))
         conn.commit()
-        print("empresas:", n_co)
 
         n_ct = n_sig = 0
         ctb, sgb = Batch(conn, CT_SQL), Batch(conn, SIG_SQL)
