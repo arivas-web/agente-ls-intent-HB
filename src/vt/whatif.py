@@ -8,6 +8,15 @@ from .db.conn import connect
 from .recalc import compute_company
 from .scoring.signals import Signal
 
+# Escenarios de MODELO (no solo de calibración): puntos a la respuesta de email detectada y "movimiento = máx(intención, engagement)".
+MODEL_SCENARIOS = {
+    "actual": {},
+    "respuesta detectada = 10 pts": {"reply_pts": 10},
+    "movimiento = máx(intención, engagement)": {"movement_max": True},
+    "respuesta 10 pts + movimiento = máx": {"reply_pts": 10, "movement_max": True},
+    "respuesta 10 pts + movimiento = máx + sat30": {"reply_pts": 10, "movement_max": True, "saturation": 30},
+}
+
 SCENARIOS = {
     "base (sat50, semivida14, tiers 50/20)": {},
     "sat30": {"saturation": 30},
@@ -17,6 +26,31 @@ SCENARIOS = {
     "sat30 + semivida30 + tiers 40/15": {"saturation": 30, "half_life_days": 30, "tiers": {1: 40, 2: 15}},
 }
 MOVE = ["A1", "A2", "B1", "B2", "C1", "C2"]
+
+
+def run_model(base, elig, cts, sigs, now):
+    from dataclasses import replace
+    from .scoring.matrix import priority
+    print("\n######## ESCENARIOS DE MODELO (cuentas elegibles) ########")
+    for name, ch in MODEL_SCENARIOS.items():
+        cfgs = copy.deepcopy(base)
+        if "saturation" in ch:
+            cfgs["int"]["saturation"] = ch["saturation"]
+        cnt, with_move = Counter(), 0
+        for c in elig:
+            ss = sigs.get(c["hs_id"], [])
+            if ch.get("reply_pts"):
+                ss = [replace(x, points=float(ch["reply_pts"])) if x.type == "reply_detected" else x for x in ss]
+            r = compute_company(c, cts.get(c["hs_id"], []), ss, cfgs, now)
+            code = r["priority"]
+            if ch.get("movement_max"):
+                mv = max(r["intent"]["score"], r["engagement"]["score"])
+                t = cfgs["int"]["tiers"]
+                tier = 1 if mv >= t[1] else 2 if mv >= t[2] else 3
+                code, _ = priority(r["fit"]["tier"], tier, cfgs["matrix"])
+            cnt[code] += 1
+        move = sum(cnt[k] for k in MOVE)
+        print(f"\n## {name}\n   con movimiento (A1,A2,B1,B2,C1,C2): {move} | " + " ".join(f"{k}={cnt[k]}" for k in MOVE + ['A3', 'B3', 'C3']))
 
 
 def main():
@@ -47,6 +81,7 @@ def main():
         move = sum(cnt[k] for k in MOVE)
         print(f"\n## {name}\n   movimiento (A1,A2,B1,B2,C1,C2): {move} | " +
               " ".join(f"{k}={cnt[k]}" for k in MOVE + ['A3', 'B3', 'C3']))
+    run_model(base, elig, cts, sigs, now)
 
 
 if __name__ == "__main__":
