@@ -17,6 +17,8 @@ contact_activity:                     # propuestas en PLAN.md §1 (historial de 
   last_url: hs_analytics_last_url
   visits: hs_analytics_num_visits
   email_clicks: hs_email_click
+  email_last_click: hs_email_last_click_date       # cada versión = un clic con su fecha
+  last_visit: hs_analytics_last_visit_timestamp   # cada versión = una sesión web
   email_optout: hs_email_optout
   email_bounce: hs_email_bounce
   email_last_replied: hs_sales_email_last_replied

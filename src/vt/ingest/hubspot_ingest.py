@@ -55,7 +55,8 @@ def main():
                      co["estado_prospeccion"], co["tipo_de_contacto"]] + props_cfg["company_activity"] + ["vt_call_outcome"]
     contact_props = ["email", ct["cargo"], *ct["telefono"], ct["linkedin_url"],
                      act["email_optout"], act["email_bounce"]]
-    history = [act["last_url"], act["visits"], act["email_clicks"], act["email_optout"], act["email_last_replied"]]
+    history = [act["last_url"], act["visits"], act["email_clicks"], act["email_optout"], act["email_last_replied"],
+               act["email_last_click"], act["last_visit"]]
 
     with connect() as conn:
         n_co = 0

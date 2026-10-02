@@ -46,10 +46,20 @@ def signals_from_history(contact_id, company_id, ph, url_cfg, eng_cfg, props):
             meta["cap_key"] = "web_noticias"
         sigs.append(Signal(contact_id, "intent" if u.block == "intencion" else "engagement",
                            "web_visit", ts, u.points, u.path, company_id, meta))
-    # Clics de email (el contador sube).
-    for ts, n in _increments(_versions(ph, props["email_clicks"])):
-        sigs.append(Signal(contact_id, "engagement", "email_click", ts,
-                           eng_cfg["weights"]["email_click"], "marketing_email", company_id, {"clicks": n}))
+    # Clics de email: cada versión de "fecha del último clic" ES un clic con su fecha (el contador acumulado
+    # perdía el primer clic de cada contacto, que no tiene versión anterior con la que comparar).
+    clicks = _versions(ph, props["email_last_click"]) if props.get("email_last_click") else []
+    for _, val in clicks:
+        try:
+            at = parse_ts(val)
+        except (TypeError, ValueError):
+            continue
+        sigs.append(Signal(contact_id, "engagement", "email_click", at,
+                           eng_cfg["weights"]["email_click"], "marketing_email", company_id, {"clicks": 1}))
+    if not clicks:
+        for ts, n in _increments(_versions(ph, props["email_clicks"])):
+            sigs.append(Signal(contact_id, "engagement", "email_click", ts,
+                               eng_cfg["weights"]["email_click"], "marketing_email", company_id, {"clicks": n}))
     # Baja de suscripción.
     for ts, val in _versions(ph, props["email_optout"]):
         if str(val).lower() == "true":
@@ -60,8 +70,16 @@ def signals_from_history(contact_id, company_id, ph, url_cfg, eng_cfg, props):
     for ts, val in _versions(ph, props["email_last_replied"]):
         if val:
             sigs.append(Signal(contact_id, "intent", "reply_detected", ts, 0, str(val), company_id))
-    # Sesiones (para el bonus de 3+ sesiones en 7 días).
-    for ts, n in _increments(_versions(ph, props["visits"])):
-        for i in range(n):
-            sigs.append(Signal(contact_id, "engagement", "session", ts, 0, f"{ts.isoformat()}#{i}", company_id))
+    # Sesiones web: cada versión de "fecha de la última sesión" es una sesión (bonus de 3+ sesiones en 7 días).
+    visits = _versions(ph, props["last_visit"]) if props.get("last_visit") else []
+    for _, val in visits:
+        try:
+            at = parse_ts(val)
+        except (TypeError, ValueError):
+            continue
+        sigs.append(Signal(contact_id, "engagement", "session", at, 0, at.isoformat(), company_id))
+    if not visits:
+        for ts, n in _increments(_versions(ph, props["visits"])):
+            for i in range(n):
+                sigs.append(Signal(contact_id, "engagement", "session", ts, 0, f"{ts.isoformat()}#{i}", company_id))
     return sigs

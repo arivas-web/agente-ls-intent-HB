@@ -11,7 +11,8 @@ from .hubspot_ingest import SIG_SQL
 def main():
     props_cfg, url_cfg, eng_cfg = load("hubspot_properties"), load("url_scoring"), load("engagement")
     act = props_cfg["contact_activity"]
-    history = [act["last_url"], act["visits"], act["email_clicks"], act["email_optout"], act["email_last_replied"]]
+    history = [act["last_url"], act["visits"], act["email_clicks"], act["email_optout"], act["email_last_replied"],
+               act["email_last_click"], act["last_visit"]]
     c = HubSpotClient()
     with connect() as conn:
         rows = conn.execute("""select c.hs_id, c.company_hs_id from contacts c
