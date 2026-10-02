@@ -23,7 +23,7 @@ export default function Nav() {
   return (
     <header className="topbar">
       <div className="topbar-in">
-        <span className="brand"><span className="logo">✦</span>Visual Trans <span className="muted" style={{ fontWeight: 500 }}>Prospección</span></span>
+        <span className="brand">Visual Trans <span className="muted" style={{ fontWeight: 500 }}>Prospección</span></span>
         <nav className="nav">
           {ITEMS.map((i) => (
             <Link key={i.href} href={i.href} className={i.match(path) ? "active" : ""}>
