@@ -4,6 +4,7 @@ import json
 import os
 import sys
 from ..config import load
+from ..db.batch import Batch
 from ..db.conn import connect
 from ..assign.data import load_scores, top_interest
 from .client import HubSpotClient
@@ -59,11 +60,14 @@ def main():
         updates = {cid: ch for cid, p in want.items() if (ch := changed(p, state.get(cid, {})))}
         print(f"Empresas con cambios: {len(updates)} de {len(want)}")
 
+        chg = Batch(conn, "insert into change_log(object_type,object_id,property,old_value,new_value,mode) "
+                          "values ('company',%s,%s,%s,%s,%s)", size=2000)
+
         def log(cid, prop, old, new, mode):
-            conn.execute("insert into change_log(object_type,object_id,property,old_value,new_value,mode) "
-                         "values ('company',%s,%s,%s,%s,%s)", (cid, prop, (state.get(cid) or {}).get(prop), str(new), mode))
+            chg.add((cid, prop, (state.get(cid) or {}).get(prop), str(new), mode))
 
         n = update_companies(client, updates, apply, log)
+        chg.flush()
         if apply:
             for cid, ch in updates.items():
                 conn.execute("""insert into hubspot_sync_state(company_hs_id, props) values (%s,%s)
