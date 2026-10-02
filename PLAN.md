@@ -118,7 +118,7 @@ RLS activado en todas las tablas. El motor usa `DATABASE_URL`; el dashboard solo
 - **Engagement:** señales por contacto → decaimiento `0,5^(días/30)` → multiplicador por cargo (CEO ×1,5 · COO/logística ×1,3 · informática ×1,2 · resto ×1,0) → amplitud (1 → ×1,0 · 2 → ×1,3 · 3+ → ×1,6) → normalizar 0–100 con tope. Mismo contenido y acción: una vez al día.
 - **Intención:** igual con semivida 14 días; bonus y reglas de congelación. `vt_intent_velocity` = hoy − hace 7 días (de las fotos diarias).
 - **Persona:** cargo hasta 40 + engagement personal hasta 40 + contactabilidad hasta 20. Buyer persona no puntúa.
-- **Matriz:** A1, A2, B1 → llamar · A3 → nutrir · C → fuera.
+- **Matriz (ajustada 2026-10-02):** código = fit + intención. A1, A2, B1 → llamar. B2, C1, C2 → llamar con movimiento (hay intención real aunque el perfil sea flojo). A3 → relleno sin intención: solo cubre huecos del reparto, marcado como tal. B3 → espera. C3 → fuera. Orden: A1, A2, B1, B2, C1, C2, A3; dentro de cada código, por velocidad de intención. Motivo: la web recibe pocas visitas (35 empresas con señal en 30 días), así que solo con A1/A2/B1 saldrían unas 4 cuentas a la semana.
 
 Los topes y el método de normalización a 0–100 (p. ej. valor de saturación) se fijan en los YAML. **Los valores concretos de saturación no los dijiste:** propongo calibrarlos con los datos reales de la Fase 1 y enseñártelos antes de congelarlos.
 

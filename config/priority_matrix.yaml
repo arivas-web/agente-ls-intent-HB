@@ -1,10 +1,14 @@
-# fit_tier + intent_tier -> acción
+# fit_tier + intent_tier -> acción.  Código de prioridad = fit_tier + intent_tier (A1, B2, C1...).
+# Decisión 2026-10-02: la intención con movimiento real cuenta aunque el perfil (fit) sea flojo.
 actions:
   A1: llamar
   A2: llamar
   B1: llamar
-  A3: nutrir_abm          # no llamar
-  B2: espera              # NO definido en la especificación: no se reparte (confirmar)
-  B3: espera              # idem
-  C: fuera                # C en cualquier nivel de intención
-order: [A1, A2, B1]       # orden de prioridad para el reparto
+  B2: llamar_con_movimiento      # perfil medio + intención moderada
+  C1: llamar_con_movimiento      # perfil flojo pero intención alta (movimiento claro)
+  C2: llamar_con_movimiento      # perfil flojo + intención moderada
+  A3: relleno_sin_intencion      # perfil A sin movimiento: solo rellena huecos si faltan cuentas (marcado como tal)
+  B3: espera
+  C3: fuera
+# Orden de prioridad para el reparto; dentro de cada código, por vt_intent_velocity y luego por fit/engagement.
+order: [A1, A2, B1, B2, C1, C2, A3]

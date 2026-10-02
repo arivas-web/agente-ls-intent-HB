@@ -35,7 +35,15 @@ def test_mejor_contacto_y_falta_decisor(persona_cfg, eng_cfg, int_cfg):
 
 def test_matriz():
     m = load("priority_matrix")
-    assert [priority("A", t, m)[1] for t in (1, 2, 3)] == ["llamar", "llamar", "nutrir_abm"]
+    assert [priority("A", t, m)[1] for t in (1, 2, 3)] == ["llamar", "llamar", "relleno_sin_intencion"]
     assert priority("B", 1, m) == ("B1", "llamar")
-    assert priority("B", 3, m)[1] == "espera"
-    assert priority("C", 1, m) == ("C", "fuera")
+    assert priority("B", 2, m) == ("B2", "llamar_con_movimiento")
+    assert priority("C", 1, m) == ("C1", "llamar_con_movimiento")      # perfil flojo con movimiento
+    assert priority("B", 3, m)[1] == "espera" and priority("C", 3, m) == ("C3", "fuera")
+
+
+def test_orden_de_reparto():
+    from vt.scoring.matrix import rank
+    m = load("priority_matrix")
+    codes = ["A3", "C1", "B1", "A1", "B2", "A2", "C3"]
+    assert sorted(codes, key=lambda c: rank(c, m)) == ["A1", "A2", "B1", "B2", "C1", "A3", "C3"]

@@ -27,4 +27,4 @@ def test_cuenta_a1_completa():
 def test_sin_senales_ni_contactos():
     co = {"target_market": "Courier", "proveedor": None, "pais": None}
     r = compute_company(co, [], [], CFG, NOW)
-    assert r["priority"] == "C" and r["action"] == "fuera" and r["missing_decision_maker"] is True
+    assert r["priority"] == "C3" and r["action"] == "fuera" and r["missing_decision_maker"] is True
