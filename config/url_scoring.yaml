@@ -1,0 +1,244 @@
+# =============================================================================
+# Scoring de visitas web – visualtrans.com
+# Para: config/scoring.yaml del sistema de lead scoring + intención de compra
+#
+# Funcionamiento:
+#   1. Se normaliza la URL (sección "normalizacion").
+#   2. Se evalúan las reglas EN ORDEN y gana la primera que coincide.
+#   3. Cada regla suma puntos a UN solo bloque: "intencion" o "engagement".
+#   4. Los puntos decaen con la semivida de su bloque.
+# Pesos iniciales: recalibrar con los resultados reales de las llamadas.
+# =============================================================================
+
+version: 1
+
+normalizacion:
+  dominio: visualtrans.com
+  minusculas: true
+  quitar_parametros: true          # utm_*, gclid, fbclid, _hsenc, etc.
+  forzar_barra_final: true
+  # WordPress ha generado duplicados con sufijo -2 / -3 en noticias.
+  # Solo se aplica dentro de /noticias/ para no romper slugs con versiones.
+  quitar_sufijo_duplicado:
+    aplicar_en: '^/noticias/'
+    patron: '-[23]/$'
+    reemplazo: '/'
+  alias:                           # duplicados de páginas raíz
+    /contactar-2/: /contactar/
+    /transitarios-2/: /transitarios/
+    /consignatarios-2/: /consignatarios/
+    /operadores-2/: /operadores/
+    /empresa-2/: /empresa/
+    /privacidad-2/: /privacidad/
+
+conteo:
+  max_por_url_y_dia: 1             # recargar la misma página no suma
+  topes_mensuales:
+    engagement_noticias: 10
+    engagement_total_contacto: 40
+
+semivida_dias:
+  intencion: 14
+  engagement: 30
+
+excluir_trafico:
+  - ips_internas_visual_trans      # rellenar con las IPs de oficina / VPN
+  - dominios_email_internos: [visualtrans.com]
+
+# =============================================================================
+# REGLAS (orden = prioridad; gana la primera coincidencia)
+# =============================================================================
+reglas:
+
+  # ---------- 1. Decisión de compra (intención) ----------
+  - id: precios
+    patron: '^/precios/$'
+    bloque: intencion
+    puntos: 20
+    alerta_si_fit: A
+
+  - id: demo
+    patron: '^/(solicita-tu-demo|demo-visual-trans)/$'
+    bloque: intencion
+    puntos: 15
+    alerta_si_fit: A
+
+  - id: contacto
+    patron: '^/contactar/$'
+    bloque: intencion
+    puntos: 12
+
+  - id: financiacion
+    patron: '^/(ayudas-y-subvenciones|kit-digital)/$'
+    bloque: intencion
+    puntos: 10
+    nota: Buscar cómo financiar la compra es señal de compra.
+
+  - id: normativa_con_plazo
+    patron: '^/(documento-electronico-de-control-administrativo-deca|autodespacho-inteligente|info-verifactu)/$|^/productos/[^/]+/verifactu/$|^/productos/suite/funcionalidades/operativa-deca-en-visual-trans-suite/$'
+    bloque: intencion
+    puntos: 10
+    nota: Obligaciones legales con fecha límite generan urgencia de compra.
+
+  - id: caso_exito_detalle
+    patron: '^/casos-de-exito/[^/]+/$'
+    bloque: intencion
+    puntos: 10
+
+  - id: caso_exito_listado
+    patron: '^/casos-de-exito/$'
+    bloque: intencion
+    puntos: 8
+
+  - id: clientes
+    patron: '^/clientes/$'
+    bloque: intencion
+    puntos: 8
+
+  - id: integraciones
+    patron: '^/(integraciones|integraciones-webcargo|deiworld)/$'
+    bloque: intencion
+    puntos: 8
+    nota: Evaluación técnica (¿encaja con lo que ya usan?).
+
+  - id: producto_principal
+    patron: '^/productos/(suite|vforwarding|empuries|virtualdua|tariff-code)/$'
+    bloque: intencion
+    puntos: 8
+    guardar_interes_producto: '$1'
+
+  - id: declaracion_responsable
+    patron: '^/productos/[^/]+/(verifactu|funcionalidades)/declaracion-responsable[^/]*/$'
+    bloque: intencion
+    puntos: 3
+    nota: La visitan sobre todo clientes; puntuación baja.
+
+  - id: producto_detalle
+    patron: '^/productos/(suite|vforwarding|empuries|virtualdua)/(modulos|funcionalidades)(/.*)?$'
+    bloque: intencion
+    puntos: 6
+    guardar_interes_producto: '$1'
+
+  - id: productos_otros
+    patron: '^/productos/otros(/.*)?$'
+    bloque: intencion
+    puntos: 6
+    guardar_interes_producto: otros
+
+  - id: vertical
+    patron: '^/(transitarios|aduanas|operadores|consignatarios|cargadores|shippers)/$'
+    bloque: intencion
+    puntos: 6
+    guardar_interes_vertical: '$1'
+
+  - id: catalogo_productos
+    patron: '^/productos/$'
+    bloque: intencion
+    puntos: 5
+
+  - id: empresa
+    patron: '^/(empresa|about|empresa/internacional)/$'
+    bloque: intencion
+    puntos: 3
+    nota: Investigar al proveedor ("¿quiénes son?").
+
+  # ---------- 2. Contenido (engagement) ----------
+  - id: novedades_producto
+    patron: '^/productos/[^/]+/novedades/.*$|^/(novedades-[^/]+|novedades-vf-[^/]+|destacados|visual-trans-suite-21-18-[^/]+)/$'
+    bloque: engagement
+    puntos: 2
+
+  - id: guia_recurso
+    patron: '^/recursos-[^/]+/$'
+    bloque: engagement
+    puntos: 3
+    nota: La descarga (formulario) puntúa aparte con 8 puntos.
+
+  - id: especiales
+    patron: '^/especiales-[^/]+/$'
+    bloque: engagement
+    puntos: 3
+
+  - id: hub_recursos
+    patron: '^/(recursos|biblioteca-de-recursos|incoterms)/$'
+    bloque: engagement
+    puntos: 2
+
+  - id: home
+    patron: '^/$'
+    bloque: engagement
+    puntos: 1
+
+  - id: indice_noticias
+    patron: '^/(noticias|portal-noticias)/$'
+    bloque: engagement
+    puntos: 1
+
+  # ---------- 3. Noticias: subclasificación por slug ----------
+  # Las palabras clave deben ser segmentos completos del slug (separados por - o _)
+  # para evitar falsos positivos (p. ej. 'pue' dentro de 'puerto').
+  # WordPress quitó las tildes de muchos slugs ('cmo', 'logstica'): por eso
+  # algunas palabras llevan variantes opcionales.
+  # Clasificación aproximada por palabras del slug. Recomendado: que Claude
+  # clasifique UNA VEZ todas las noticias por título y guarde la tabla
+  # url -> categoría; estas reglas quedan como respaldo para las nuevas.
+  - id: noticia_comparativa_compra
+    patron: '^/noticias/(?:[^/]*[-_])?(?:co?mo-elegir|co?mo-encontrar|co?mo-migrar|co?mo-digitalizar|valorar-software|por-que-comprar|escalar-empresa|software-erp|software-gestion|software-transitario|software-contabilidad|software-facturacion|software-transporte|tms-software|wms-sistema|forwarding-software|exito-en-la-implantacion|facilitando-la-transici?o?n)(?:[-_][^/]*)?/$'
+    bloque: intencion
+    puntos: 6
+    nota: Contenido de fondo de embudo (comparar y elegir software).
+
+  - id: noticia_webinar_evento
+    patron: '^/noticias/(?:[^/]*[-_])?(?:webinar|encuentro-digital|seminario|reserva-tu-plaza|apuntate|sil-2026|foro-aduanero)(?:[-_][^/]*)?/$'
+    bloque: engagement
+    puntos: 3
+
+  - id: noticia_novedad_producto
+    patron: '^/noticias/(?:[^/]*[-_])?(?:versi?o?n|nueva-version|novedad|novedades|vforwarding|vforwading|virtualdua|virtual-dua|suite-2[0-9]+|vtrans|tariff-code)(?:[-_][^/]*)?/$'
+    bloque: engagement
+    puntos: 2
+
+  - id: noticia_caso_cliente
+    patron: '^/noticias/(?:[^/]*[-_])?(?:implanta|implantan|confia|confian|nuevo-cliente|apuesta|apuestan|elige|escoge|opta-por|con-visual-trans|de-la-mano-de-visual-trans|apoyado-en-visual-trans|nueva-etapa-con|anos-de-colaboracion|creciendo-juntos|crecimiento-con)(?:[-_][^/]*)?/$'
+    bloque: intencion
+    puntos: 4
+    nota: Prueba social; buscan empresas parecidas que ya lo usan.
+
+  - id: noticia_normativa
+    patron: '^/noticias/(?:[^/]*[-_])?(?:verifactu|factura-electro?n?ica|factura-electrnica|e-factura|deca|dca|h1|ncts5?|aes|sii|ventanilla-unica|vua|oeaf?|soivre|pue|incoterms|e?cmr|t2l|igic|iva|brexit|eori|exs|ens)(?:[-_][^/]*)?/$'
+    bloque: engagement
+    puntos: 2
+
+  - id: noticia_divulgativa
+    patron: '^/noticias/(?:[^/]*[-_])?(?:co?mo|por-que|porque|que-es|claves|guia|tipos|digitaliza|digitalizaci?o?n|inteligencia|business-intelligence|logistica-4-0|cadena-de-suministro|ciberseguridad|cloud|blockchain|transformaci?o?n|huella-de-carbono)(?:[-_][^/]*)?/$'
+    bloque: engagement
+    puntos: 1
+
+  # ---------- 4. Por defecto ----------
+  - id: por_defecto
+    patron: '.*'
+    bloque: ninguno
+    puntos: 0
+    nota: >
+      Cualquier URL sin regla no puntúa (legales, páginas internas, confirmación
+      de formulario, zona de clientes, noticias corporativas antiguas...).
+      El filtrado de clientes, estudiantes, etc. se hace por tipo de contacto.
+
+# =============================================================================
+# BONUS DE COMPORTAMIENTO (sobre la cuenta, no sobre la URL)
+# =============================================================================
+bonus:
+  - id: ruta_evaluacion
+    descripcion: >
+      En una misma sesión o en 48 h, la cuenta visita (producto o vertical)
+      Y ADEMÁS (precios, demo o caso de éxito).
+    bloque: intencion
+    puntos: 10
+
+# =============================================================================
+# PROPIEDADES QUE SE ALIMENTAN DE LAS VISITAS (para el email a las SDR)
+# =============================================================================
+propiedades_derivadas:
+  vt_interes_producto: producto más visitado en los últimos 30 días
+  vt_interes_vertical: vertical más visitada en los últimos 30 días
+  vt_paginas_clave_30d: lista de páginas de intención vistas (para el resumen)
