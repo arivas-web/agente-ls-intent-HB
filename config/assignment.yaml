@@ -1,0 +1,7 @@
+# Reparto semanal
+accounts_per_sdr_per_week: 10
+sdrs: [Emma, Laura]            # owner IDs de HubSpot: pendiente de confirmar
+draft:  {weekday: thu, time: "09:00", tz: Europe/Madrid}   # supuesto, cambiable
+send:   {weekday: mon, time: "08:00", tz: Europe/Madrid}   # confirmado
+excluded_statuses: [Discarded, Client, Account, On prospection, Engaged, Contacted, Meeting]
+inactivity_months_for_control: 6

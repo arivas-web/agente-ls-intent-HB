@@ -9,7 +9,7 @@ Fecha: 2026-10-02.
 |---|---|
 | Base de datos | Supabase (Postgres) |
 | Email | Gmail por SMTP con contraseña de aplicación (gratis, sin dominio que verificar). Límite ~500 envíos/día, de sobra |
-| Destinatario | Todo a `arivas@visualtrans.com` (en `config/email.yaml`) |
+| Destinatario y remitente | Todo a `arivas@visualtrans.com`, enviado desde `arivas@visualms.com` (ambos en `config/email.yaml`) |
 | Envío semanal | **Lunes 08:00 (España)**, solo si la semana está validada |
 | Oportunidades | Solo Venzo. Los deals de HubSpot NO se usan como oportunidades (su pipeline es el de prospección) |
 | Tráfico interno | Solo se excluyen contactos `@visualtrans.com`. Sin IPs de oficina |
@@ -17,14 +17,16 @@ Fecha: 2026-10-02.
 | Cargo | `cargo_icp` (desplegable). Si está vacío, `jobtitle` clasificado con Claude |
 | Propiedades confirmadas | Ver `config/hubspot_properties.yaml` |
 
-Supuestos míos, a confirmar o cambiar en YAML (no en código): borrador el **jueves 09:00** (da margen hasta el lunes); **N = 25 cuentas por SDR y semana**; alertas de **09:00 a 18:00** España, lunes a viernes.
+Confirmado: **10 cuentas por SDR y semana**.
+Supuestos míos, a confirmar o cambiar en YAML (no en código): borrador el **jueves 09:00** (da margen hasta el lunes); alertas de **09:00 a 18:00** España, lunes a viernes.
+Descartado: las visitas de empresas anónimas por IP (las gestiona otro sistema). No se lee `buyer_intent` ni se aplica el 50 % de esa señal.
 
 ## 1. Lo que NO se puede hacer, o no está verificado
 
 Se marca cada punto con su alternativa.
 
 1. **Visitas web por contacto con URL y fecha.** Desde el conector de descubrimiento solo vi agregados (`hs_analytics_num_page_views`, `hs_analytics_last_url`). El detalle por visita exige la API de eventos de HubSpot, que no he podido comprobar. *Se verifica con el token real al empezar la Fase 1.* Si no está disponible, alternativas: (a) Google Analytics 4 con `hutk`/email, (b) puntuar solo con agregados (última URL + visitas, con menos precisión), (c) exportación periódica manual.
-2. **Visitas de empresas anónimas por IP.** Requiere el permiso `buyer_intent.read`, no concedido al conector. Hay que reconectar HubSpot con ese permiso. Si no hay permiso, esa señal queda desactivada (flag en YAML). Existen `hs_intent_page_views_last_30_days` y `hs_intent_visitors_last_30_days` en empresa, pero son agregados de 30 días, sin URL.
+2. **Visitas de empresas anónimas por IP.** Fuera de alcance por decisión tuya (otro sistema). No se pide el permiso `buyer_intent.read`.
 3. **Clics de email con fecha.** Hay contadores y última fecha (`hs_email_click`, `hs_email_last_click_date`), pero no cada clic. Para el decaimiento por señal hace falta la API de actividad de emails. Si no está, se registra solo el último clic y se pierde precisión en contactos con muchos clics.
 4. **LinkedIn.** No hay propiedades de actividad de LinkedIn en HubSpot. Fuente alternativa propuesta: exportación manual de analíticas de la página de empresa y de Enrique a CSV en `data/linkedin/`. Nunca se extraen datos de Emma, Cecilio ni Laura. Mientras no exista el CSV, el bloque queda a 0.
 5. **Webinars, descargas de contenido, newsletter, ferias.** No he localizado aún las propiedades o formularios que las representan. Se preguntarán una a una en la Fase 1.
@@ -138,7 +140,7 @@ El código comprueba la hora en `Europe/Madrid` y no hace nada si no corresponde
 - **Fase 4:** alertas por hora.
 - **Fase 5:** Oportunidades, Tasas, resultado de llamada, informe mensual.
 
-Tests: cada puntuación, normalización de URLs (ya existe `tests/test_url_scoring.py` según tu mensaje; **no está en el repo**, necesito que lo subas junto con `config/url_scoring.yaml`), casado con Venzo y reparto equilibrado. README con secretos y cómo subir un CSV nuevo.
+Tests: cada puntuación, normalización de URLs (ya existe `tests/test_url_scoring.py` según tu mensaje; **no está en el repo ni lo encuentro en Drive**; necesito su contenido junto con `config/url_scoring.yaml`), casado con Venzo y reparto equilibrado. README con secretos y cómo subir un CSV nuevo.
 
 ## 8. Riesgos
 
@@ -148,7 +150,7 @@ Tests: cada puntuación, normalización de URLs (ya existe `tests/test_url_scori
 | Casado Venzo con falsos positivos | Orden CIF > dominio > nombre; dudas a informe de revisión, nunca asumidas |
 | Datos comerciales en logs | Logs sin nombres ni emails; Actions con `::add-mask::`; repositorio privado; el CSV no se imprime |
 | Claude devuelve JSON inválido | Esquema estricto, validación, 2 reintentos; si falla, la cuenta va sin texto y se marca |
-| Coste de Claude | Resúmenes solo para el borrador (unas 50 cuentas/semana), disparadores solo A y B una vez por semana, caché por hash de entrada |
+| Coste de Claude | Resúmenes solo para el borrador (20 cuentas por semana), disparadores solo A y B una vez por semana, caché por hash de entrada |
 | Límites de la API de HubSpot (100 req/10 s) | Lectura por lotes y reintentos con espera |
 | Pesos mal calibrados | El informe mensual solo propone; nunca se aplican solos |
 | Desborde de una propiedad confirmada | Si un nombre desaparece de la API, el motor se detiene y te avisa; no busca otro |
@@ -157,14 +159,14 @@ Tests: cada puntuación, normalización de URLs (ya existe `tests/test_url_scori
 
 ## 9. Secretos
 
-`HUBSPOT_TOKEN`, `ANTHROPIC_API_KEY`, `DATABASE_URL`, `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `DASHBOARD_PASSWORD` (GitHub Actions y Vercel según corresponda).
+`HUBSPOT_TOKEN`, `ANTHROPIC_API_KEY`, `DATABASE_URL`, `GMAIL_USER` (arivas@visualms.com), `GMAIL_APP_PASSWORD`, `DASHBOARD_PASSWORD` (GitHub Actions y Vercel según corresponda).
 Para Gmail hay que activar la verificación en dos pasos en la cuenta de envío y crear una contraseña de aplicación.
 
 ## 10. Pendiente de ti antes de implementar
 
 1. Aprobar o ajustar este plan y los supuestos de la sección 0 (jueves 09:00, N = 25, alertas 09:00–18:00).
-2. Cuenta de Gmail de envío.
+2. Contraseña de aplicación de `arivas@visualms.com` (requiere verificación en dos pasos). Si esa cuenta es Google Workspace, el administrador debe permitirlo.
 3. Subir `config/url_scoring.yaml`, `tests/test_url_scoring.py` y el CSV de Venzo (mínimo unas filas anonimizadas).
-4. Reconectar HubSpot con `buyer_intent.read`, si quieres la señal de empresas anónimas.
+4. ~~Reconectar HubSpot con `buyer_intent.read`~~ — descartado.
 5. Nombres de las propiedades de webinars, descargas, newsletter y ferias (los pregunto una a una en la Fase 1).
 6. Identificar a Emma y Laura en HubSpot (owner IDs) para el reparto.

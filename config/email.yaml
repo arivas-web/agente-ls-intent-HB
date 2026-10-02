@@ -1,0 +1,11 @@
+# Destinatarios y remitente. Cambiar aquí, nunca en código.
+sender: arivas@visualms.com
+transport: gmail_smtp          # contraseña de aplicación en GMAIL_APP_PASSWORD
+recipients:
+  draft_ready: [arivas@visualtrans.com]
+  weekly_sdr:
+    Emma: [arivas@visualtrans.com]
+    Laura: [arivas@visualtrans.com]
+  alerts: [arivas@visualtrans.com]
+  notices: [arivas@visualtrans.com]
+  monthly_report: [arivas@visualtrans.com]
