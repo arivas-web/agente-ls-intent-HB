@@ -57,6 +57,29 @@ def main():
         if st == 200:
             out["event_types"] = (body or {}).get("eventTypes", [])[:60]
 
+
+    # 4b. Historial de propiedades agregadas (sin permisos extra): ¿hay una versión por visita/clic?
+    HIST = ["hs_analytics_last_url", "hs_analytics_num_page_views", "hs_analytics_last_timestamp",
+            "hs_email_last_click_date", "hs_email_click", "hs_sales_email_last_replied", "hs_email_last_open_date"]
+    st, body = c.search("contacts", {
+        "filterGroups": [{"filters": [{"propertyName": "hs_analytics_num_page_views", "operator": "GT", "value": "5"}]}],
+        "limit": 20})
+    ids = [r["id"] for r in (body or {}).get("results", [])]
+    hist = {}
+    for cid2 in ids[:10]:
+        st, b = c.get(f"/crm/v3/objects/contacts/{cid2}", propertiesWithHistory=",".join(HIST))
+        out["history_status"] = st
+        ph = (b or {}).get("propertiesWithHistory", {}) or {}
+        for k in HIST:
+            v = ph.get(k) or []
+            h = hist.setdefault(k, {"contacts_with_history": 0, "max_versions": 0, "oldest": None})
+            if v:
+                h["contacts_with_history"] += 1
+                h["max_versions"] = max(h["max_versions"], len(v))
+                ts = min(x.get("timestamp", "") for x in v)
+                h["oldest"] = min(filter(None, [h["oldest"], ts])) if h["oldest"] else ts
+    out["property_history_sample"] = hist
+
     # 5. Actividad de email (objetos EMAIL) y reuniones/llamadas
     for obj in ("emails", "calls", "meetings"):
         st, body = c.get(f"/crm/v3/objects/{obj}", limit=1)
