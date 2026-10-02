@@ -1,5 +1,6 @@
 """Borrador semanal: reparto + textos de Claude + aviso por email. Estado inicial: pendiente_validar."""
 import json
+import os
 import sys
 from datetime import datetime, timedelta, timezone
 from ..claude.context import build_context
@@ -10,7 +11,8 @@ from ..email import render
 from ..email.send import send
 from ..timeguard import MADRID, at_hour, DAYS, forced, madrid_now
 from .build import build_draft
-from .data import load_account_detail, load_scores, top_interest
+from .data import load_scores
+from .summaries import fill_summaries
 
 
 def next_monday(now=None):
@@ -43,27 +45,10 @@ def main():
             conn.execute("delete from draft_candidates where draft_id = %s", (draft_id,))
         else:
             draft_id = conn.execute("insert into weekly_drafts(week) values (%s) returning id", (week,)).fetchone()[0]
-        detail = load_account_detail(conn, [a["hs_id"] for a in asg])
-        ccfg, claude_ok, n_claude = load("claude"), True, 0
         for a in asg:
-            r, dt = by_id[a["hs_id"]], detail[a["hs_id"]]
-            summary = None
-            if claude_ok:
-                try:
-                    ctx = build_context(
-                        r, [{**s, "at": s["at"].isoformat()} for s in dt["signals"]], dt["contacts"], dt["venzo"],
-                        top_interest(dt["signals"]))
-                    summary = summarize_account(ctx, {c["id"] for c in dt["contacts"]}, cfg=ccfg)
-                    n_claude += 1
-                except ClaudeUnavailable as e:
-                    claude_ok = False
-                    print("Claude no disponible; el borrador sale sin textos:", e)
-                except ValueError as e:
-                    print("Resumen inválido para una cuenta:", e)
-            conn.execute("""insert into weekly_assignments(draft_id,company_hs_id,sdr,rank,is_control,origin,claude,sdr_original)
-                            values (%s,%s,%s,%s,%s,%s,%s,%s)""",
-                         (draft_id, a["hs_id"], a["sdr"], a["rank"], a["is_control"], a["origin"],
-                          json.dumps(summary) if summary else None, a["sdr"]))
+            conn.execute("""insert into weekly_assignments(draft_id,company_hs_id,sdr,rank,is_control,origin,sdr_original)
+                            values (%s,%s,%s,%s,%s,%s,%s)""",
+                         (draft_id, a["hs_id"], a["sdr"], a["rank"], a["is_control"], a["origin"], a["sdr"]))
         for i, c in enumerate(cands, 1):
             pool = bool(c.get("is_control_pool"))
             conn.execute("""insert into draft_candidates(draft_id,company_hs_id,rank,code,fit,intent,engagement,velocity,is_control_pool)
@@ -71,8 +56,11 @@ def main():
                          (draft_id, c["hs_id"], 1000 + i if pool else i, c["code"], c["fit"], c["intent"],
                           c["engagement"], c["velocity"], pool))
         conn.execute("insert into job_runs(job,finished_at,status,detail) values ('draft', now(), 'ok', %s)",
-                     (f"week={week} cuentas={len(asg)} claude={n_claude}",))
+                     (f"week={week} cuentas={len(asg)}",))
         conn.commit()
+        n_claude = 0
+        if os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"):
+            n_claude = fill_summaries(conn, draft_id)[0]
     print(f"Borrador {week}: {len(asg)} cuentas ({sum(a['is_control'] for a in asg)} de control), "
           f"{sum(1 for c in cands if not c.get('is_control_pool'))} candidatos, {n_claude} resúmenes de Claude.")
     subj, html, text = render.draft_ready(week, len(asg), ecfg.get("dashboard_url"))
