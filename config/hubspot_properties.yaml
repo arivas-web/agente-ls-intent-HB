@@ -6,7 +6,7 @@ company:
   proveedor_actual: proveedores         # confirmado 2026-10-02 (enumeración; mapeo valor->puntos con coincidencia aproximada, ver config/fit.yaml)
   ubicacion: pais                       # confirmado 2026-10-02 (enumeración)
   estado_prospeccion: company___status  # confirmado 2026-10-02 (enumeración)
-  tipo_de_contacto: tipo_de_contacto    # confirmado 2026-10-02 (enumeración, EMPRESA); los contactos heredan la exclusión de su empresa. Valores a excluir: pendiente de confirmar
+  tipo_de_contacto: tipo_de_contacto    # confirmado 2026-10-02 (enumeración, EMPRESA); los contactos heredan la exclusión de su empresa. Excluir: Asociaciones del sector, Cliente, Competencia, Partner, Prensa. Mantener: Precliente, No target, vacío
 contact:
   cargo: cargo_icp                      # confirmado 2026-10-02 (enumeración; no hace falta clasificar con Claude)
   telefono:                             # confirmado 2026-10-02 (todas las relacionadas salvo WhatsApp)
@@ -14,3 +14,11 @@ contact:
     - phone
   linkedin_url: hs_linkedin_url         # confirmado 2026-10-02
 deal: {}
+opportunities:
+  source: venzo_only   # confirmado 2026-10-02: los deals de HubSpot no se usan como oportunidades
+excluded_contact_types:
+  - Asociaciones del sector
+  - Cliente
+  - Competencia
+  - Partner
+  - Prensa
