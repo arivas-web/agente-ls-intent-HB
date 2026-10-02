@@ -8,6 +8,7 @@ Fecha: 2026-10-02.
 | Tema | Decisión |
 |---|---|
 | Base de datos | Supabase (Postgres), proyecto `bmudirnikpgcqfieyueq` (URL en `config/database.yaml`; la contraseña va solo en `DATABASE_URL`) |
+| Acceso al dashboard | Supabase Auth con email y contraseña (un único usuario, creado por ti en Supabase). Sustituye a `DASHBOARD_PASSWORD`. El dashboard sigue desplegado en Vercel (Supabase no aloja Next.js) |
 | Claude | Suscripción Claude Pro, **sin API de pago**. Se usa Claude Code en modo no interactivo (`claude -p`) en GitHub Actions con un token OAuth de suscripción (`CLAUDE_CODE_OAUTH_TOKEN`, generado con `claude setup-token`) |
 | Email | Gmail por SMTP con contraseña de aplicación (gratis, sin dominio que verificar). Límite ~500 envíos/día, de sobra |
 | Destinatario y remitente | Todo a `arivas@visualtrans.com`, enviado desde `arivas@visualms.com` (ambos en `config/email.yaml`) |
@@ -136,7 +137,7 @@ El código comprueba la hora en `Europe/Madrid` y no hace nada si no corresponde
 ## 7. Fases y entregables
 
 - **Fase 1:** ingesta HubSpot + Venzo, 4 puntuaciones con desglose, matriz, base de datos, escritura `vt_` en dry-run. *Antes:* verificar con el token real las limitaciones del apartado 1 y proponerte el mapeo del CSV de Venzo.
-- **Fase 2:** dashboard (Semana siguiente y Cuentas), contraseña (`DASHBOARD_PASSWORD`).
+- **Fase 2:** dashboard (Semana siguiente y Cuentas), inicio de sesión con Supabase Auth (un solo usuario). Las tablas llevan RLS que solo permite a ese usuario leer y escribir; el motor usa `DATABASE_URL`.
 - **Fase 3:** borrador, validación, capa de Claude, emails.
 - **Fase 4:** alertas por hora.
 - **Fase 5:** Oportunidades, Tasas, resultado de llamada, informe mensual.
@@ -167,7 +168,7 @@ Tests: cada puntuación, normalización de URLs (ya existe `tests/test_url_scori
 
 ## 9. Secretos
 
-`HUBSPOT_TOKEN`, `CLAUDE_CODE_OAUTH_TOKEN`, `DATABASE_URL` (usar la cadena del *connection pooler* de Supabase: los runners de GitHub son solo IPv4 y la conexión directa de Supabase es IPv6), `GMAIL_USER` (arivas@visualms.com), `GMAIL_APP_PASSWORD`, `DASHBOARD_PASSWORD` (GitHub Actions y Vercel según corresponda).
+`HUBSPOT_TOKEN`, `CLAUDE_CODE_OAUTH_TOKEN`, `DATABASE_URL` (usar la cadena del *connection pooler* de Supabase: los runners de GitHub son solo IPv4 y la conexión directa de Supabase es IPv6), `GMAIL_USER` (arivas@visualms.com), `GMAIL_APP_PASSWORD`, `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` (públicas por diseño) y `SUPABASE_SERVICE_ROLE_KEY` (solo servidor, solo Vercel), en lugar de `DASHBOARD_PASSWORD`.
 Para Gmail hay que activar la verificación en dos pasos en la cuenta de envío y crear una contraseña de aplicación.
 
 ## 10. Pendiente de ti antes de implementar
