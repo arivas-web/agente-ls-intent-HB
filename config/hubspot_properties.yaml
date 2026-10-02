@@ -13,6 +13,17 @@ contact:
     - mobilephone
     - phone
   linkedin_url: hs_linkedin_url         # confirmado 2026-10-02
+contact_activity:                     # propuestas en PLAN.md §1 (historial de propiedades); aprobadas con el 'dale' del plan
+  last_url: hs_analytics_last_url
+  visits: hs_analytics_num_visits
+  email_clicks: hs_email_click
+  email_optout: hs_email_optout
+  email_bounce: hs_email_bounce
+  email_last_replied: hs_sales_email_last_replied
+company_activity:                     # última actividad de la empresa (para el grupo de control: 6 meses sin actividad)
+  - notes_last_updated
+  - hs_last_sales_activity_timestamp
+  - hs_analytics_last_visit_timestamp
 deal: {}
 opportunities:
   source: venzo_only   # confirmado 2026-10-02: los deals de HubSpot no se usan como oportunidades
