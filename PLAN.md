@@ -27,12 +27,12 @@ Descartado: las visitas de empresas anónimas por IP (las gestiona otro sistema)
 
 Se marca cada punto con su alternativa.
 
-1. **Visitas web por contacto con URL y fecha.** Desde el conector de descubrimiento solo vi agregados (`hs_analytics_num_page_views`, `hs_analytics_last_url`). El detalle por visita exige la API de eventos de HubSpot, que no he podido comprobar. *Se verifica con el token real al empezar la Fase 1.* Si no está disponible, alternativas: (a) Google Analytics 4 con `hutk`/email, (b) puntuar solo con agregados (última URL + visitas, con menos precisión), (c) exportación periódica manual.
+1. **Visitas web por contacto con URL y fecha.** La Events API devuelve 403 con nuestro token (comprobado). **Solución sin permisos nuevos (comprobada con la sonda):** el historial de propiedades de contacto (`propertiesWithHistory`) de `hs_analytics_last_url`, `hs_analytics_last_timestamp` y `hs_analytics_num_page_views` guarda una versión con fecha por cada visita registrada (hasta 45 versiones por propiedad, desde oct-2025 en la muestra). Se leen en la ingesta y se guardan como señales en Supabase. Limitaciones: tope de ~45 versiones por contacto (la ingesta diaria y la de las alertas por hora van acumulando el histórico propio) y puede haber páginas intermedias de una misma sesión que HubSpot no registre.
 2. **Visitas de empresas anónimas por IP.** Fuera de alcance por decisión tuya (otro sistema). No se pide el permiso `buyer_intent.read`.
-3. **Clics de email con fecha.** Hay contadores y última fecha (`hs_email_click`, `hs_email_last_click_date`), pero no cada clic. Para el decaimiento por señal hace falta la API de actividad de emails. Si no está, se registra solo el último clic y se pierde precisión en contactos con muchos clics.
+3. **Email.** Decisión: no se usa la API de emails (403, y no se ampliará). Clics: se derivan del historial de `hs_email_click` y `hs_email_last_click_date` (misma técnica que las visitas). Aperturas puntúan 0, bajas con `hs_email_optout`.
 4. **LinkedIn.** No hay propiedades de actividad de LinkedIn en HubSpot. Fuente alternativa propuesta: exportación manual de analíticas de la página de empresa y de Enrique a CSV en `data/linkedin/`. Nunca se extraen datos de Emma, Cecilio ni Laura. Mientras no exista el CSV, el bloque queda a 0.
 5. **Webinars, descargas de contenido, newsletter, ferias.** No he localizado aún las propiedades o formularios que las representan. Se preguntarán una a una en la Fase 1.
-6. **Respuestas a email: positiva / no interesa / ahora no.** Claude clasifica el texto de las respuestas (objeto EMAIL de HubSpot). Se necesita comprobar que las respuestas entrantes se registran en la ficha.
+6. **Respuestas a email: positiva / no interesa / ahora no.** Sin acceso al contenido de los emails, Claude no puede clasificarlas. Solución: propiedades de empresa que rellena la SDR (a crear): `vt_respuesta_email` (Positiva · No interesa · Ahora no) y `vt_reactivar_en` (fecha). Reglas: Positiva +25 de intención; No interesa → intención 0 y congelada 90 días; Ahora no → congelar y reactivar con +20 en la fecha. Como pista de que hubo respuesta se usa el historial de `hs_sales_email_last_replied`, que sirve para avisar a la SDR de que clasifique.
 7. **Supabase gratuito** pausa el proyecto tras 7 días sin actividad. El recálculo diario lo evita.
 8. **Tamaño de datos.** No sé aún cuántas empresas y contactos hay. Lo mido en la Fase 1 antes de fijar el diseño de la ingesta (límites de la API y tiempos de Actions).
 9. **Zona horaria.** Los cron de GitHub van en UTC. El cambio de hora de invierno es el 25 de octubre de 2026. Cada trabajo se programa a dos horas UTC (verano e invierno) y el código sale si no son las horas correctas en `Europe/Madrid`. Así no hay que tocar nada en marzo ni en octubre.
@@ -47,6 +47,7 @@ Empresa:
 - `vt_missing_decision_maker` (sí/no)
 - `vt_assigned_sdr`, `vt_assigned_week`, `vt_control_group` (sí/no)
 - `vt_last_alert_at`, `vt_last_alert_reason`
+- `vt_respuesta_email` (Positiva · No interesa · Ahora no) y `vt_reactivar_en` (fecha): las rellena la SDR
 - `vt_call_outcome` (no contesta · no interesado · mal timing · ya tiene proveedor · seguimiento · reunión)
 - `vt_scored_at`
 
