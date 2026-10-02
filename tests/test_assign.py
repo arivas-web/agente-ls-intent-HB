@@ -48,7 +48,10 @@ def test_borrador_completo_control_y_exclusiones():
     assert Counter(a["sdr"] for a in ctrl) == {"Emma": 2, "Laura": 2}
     assert "400" not in {a["hs_id"] for a in asg}                       # cliente excluido
     assert {"300", "301", "302"} <= {a["hs_id"] for a in asg}            # A1 siempre dentro
-    assert len(cands) == 60 and not ({c["hs_id"] for c in cands} & {a["hs_id"] for a in asg})
+    scored_c = [c for c in cands if not c.get("is_control_pool")]
+    reserve = [c for c in cands if c.get("is_control_pool")]
+    assert len(scored_c) == 60 and len(reserve) == 10 and all(c["hs_id"] in inactive for c in reserve)
+    assert not ({c["hs_id"] for c in cands} & {a["hs_id"] for a in asg})
     asg2, _ = build_draft(rows, CFG, M, seed="vt-2026-10-05", inactive_ids=inactive)
     assert asg == asg2                                                    # sorteo reproducible
 

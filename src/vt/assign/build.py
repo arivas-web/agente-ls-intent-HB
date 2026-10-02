@@ -22,11 +22,12 @@ def rank_candidates(rows, matrix_cfg):
                                      -(r["engagement"] or 0), r["hs_id"]))
 
 
-def pick_control(pool, k_per_sdr, n_sdrs, seed):
-    """Sorteo aleatorio reproducible (seed) del grupo de control."""
+def pick_control(pool, k_per_sdr, n_sdrs, seed, extra=0):
+    """Sorteo aleatorio reproducible (seed) del grupo de control. Devuelve (elegidas, reservas para sustituir)."""
     rng = random.Random(seed)
     k = k_per_sdr * n_sdrs
-    return rng.sample(pool, min(k, len(pool)))
+    order = rng.sample(pool, len(pool))
+    return order[:k], order[k:k + extra]
 
 
 def balance(ranked, sdrs, n_per_sdr):
@@ -56,7 +57,7 @@ def build_draft(rows, cfg, matrix_cfg, seed, open_opportunity_ids=frozenset(), i
     min_tier = TIER_ORDER[cfg.get("control_min_fit_tier", "B")]
     pool = sorted([r for r in elig if r["hs_id"] in inactive_ids and TIER_ORDER.get(r["fit_tier"], 9) <= min_tier],
                   key=lambda r: r["hs_id"])
-    control = pick_control(pool, k_ctrl, len(sdrs), seed)
+    control, control_reserve = pick_control(pool, k_ctrl, len(sdrs), seed, extra=10)
     control_ids = {r["hs_id"] for r in control}
     ranked = rank_candidates([r for r in elig if r["hs_id"] not in control_ids], matrix_cfg)
     scored = balance(ranked, sdrs, n - k_ctrl)
@@ -74,4 +75,5 @@ def build_draft(rows, cfg, matrix_cfg, seed, open_opportunity_ids=frozenset(), i
                             "origin": "control", "code": r["code"]})
         used.add(r["hs_id"])
     candidates = [r for r in ranked if r["hs_id"] not in used][:cfg.get("candidate_pool_size", 60)]
+    candidates += [{**r, "is_control_pool": True} for r in control_reserve]   # reservas de control (sustituciones)
     return assignments, candidates

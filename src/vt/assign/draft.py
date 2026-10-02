@@ -65,14 +65,16 @@ def main():
                          (draft_id, a["hs_id"], a["sdr"], a["rank"], a["is_control"], a["origin"],
                           json.dumps(summary) if summary else None, a["sdr"]))
         for i, c in enumerate(cands, 1):
-            conn.execute("""insert into draft_candidates(draft_id,company_hs_id,rank,code,fit,intent,engagement,velocity)
-                            values (%s,%s,%s,%s,%s,%s,%s,%s)""",
-                         (draft_id, c["hs_id"], i, c["code"], c["fit"], c["intent"], c["engagement"], c["velocity"]))
+            pool = bool(c.get("is_control_pool"))
+            conn.execute("""insert into draft_candidates(draft_id,company_hs_id,rank,code,fit,intent,engagement,velocity,is_control_pool)
+                            values (%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                         (draft_id, c["hs_id"], 1000 + i if pool else i, c["code"], c["fit"], c["intent"],
+                          c["engagement"], c["velocity"], pool))
         conn.execute("insert into job_runs(job,finished_at,status,detail) values ('draft', now(), 'ok', %s)",
                      (f"week={week} cuentas={len(asg)} claude={n_claude}",))
         conn.commit()
     print(f"Borrador {week}: {len(asg)} cuentas ({sum(a['is_control'] for a in asg)} de control), "
-          f"{len(cands)} candidatos, {n_claude} resúmenes de Claude.")
+          f"{sum(1 for c in cands if not c.get('is_control_pool'))} candidatos, {n_claude} resúmenes de Claude.")
     subj, html, text = render.draft_ready(week, len(asg), ecfg.get("dashboard_url"))
     send(subj, html, text, ecfg["recipients"]["draft_ready"])
 
