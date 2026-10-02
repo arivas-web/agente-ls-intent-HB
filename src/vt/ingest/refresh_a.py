@@ -10,6 +10,7 @@ from .hubspot_ingest import SIG_SQL
 
 def main():
     props_cfg, url_cfg, eng_cfg = load("hubspot_properties"), load("url_scoring"), load("engagement")
+    reply_points = load("intent")["weights"]["reply_detected"]
     act = props_cfg["contact_activity"]
     history = [act["last_url"], act["visits"], act["email_clicks"], act["email_optout"], act["email_last_replied"],
                act["email_last_click"], act["last_visit"]]
@@ -31,7 +32,7 @@ def main():
                 raise SystemExit(f"HubSpot batch/read: HTTP {st} ({(resp or {}).get('category')})")
             for r in (resp or {}).get("results", []):
                 for s in signals_from_history(r["id"], comp[r["id"]], r.get("propertiesWithHistory") or {},
-                                              url_cfg, eng_cfg, act):
+                                              url_cfg, eng_cfg, act, reply_points):
                     sgb.add((s.company_id, s.contact_id, s.kind, s.type, s.object_key, s.at, s.points, json.dumps(s.meta)))
                     n += 1
         sgb.flush()

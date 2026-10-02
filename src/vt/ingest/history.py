@@ -31,7 +31,7 @@ def _increments(vers):
     return out
 
 
-def signals_from_history(contact_id, company_id, ph, url_cfg, eng_cfg, props):
+def signals_from_history(contact_id, company_id, ph, url_cfg, eng_cfg, props, reply_points=0):
     """ph: propertiesWithHistory del contacto. props: nombres de config/hubspot_properties.yaml."""
     sigs = []
     # Visitas web: cada cambio de última URL = una visita.
@@ -66,10 +66,10 @@ def signals_from_history(contact_id, company_id, ph, url_cfg, eng_cfg, props):
             sigs.append(Signal(contact_id, "engagement", "unsubscribe", ts,
                                eng_cfg["weights"]["unsubscribe"], "optout", company_id))
             break
-    # Respuesta de email detectada (sin puntos: sirve para avisar a la SDR de que la clasifique).
+    # Respuesta de email detectada: puntos base (config intent.weights.reply_detected). No sabemos si es positiva.
     for ts, val in _versions(ph, props["email_last_replied"]):
         if val:
-            sigs.append(Signal(contact_id, "intent", "reply_detected", ts, 0, str(val), company_id))
+            sigs.append(Signal(contact_id, "intent", "reply_detected", ts, reply_points, str(val), company_id))
     # Sesiones web: cada versión de "fecha de la última sesión" es una sesión (bonus de 3+ sesiones en 7 días).
     visits = _versions(ph, props["last_visit"]) if props.get("last_visit") else []
     for _, val in visits:

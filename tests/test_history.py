@@ -45,3 +45,9 @@ def test_primer_clic_y_primera_sesion_no_se_pierden(url_cfg, eng_cfg):
 
 def test_sin_historial(url_cfg, eng_cfg):
     assert signals_from_history("c", "k", {}, url_cfg, eng_cfg, P) == []
+
+
+def test_respuesta_detectada_lleva_puntos_de_config(url_cfg, eng_cfg):
+    ph = {"hs_sales_email_last_replied": [v("1790000000000", "2026-09-10T00:00:00Z")]}
+    assert signals_from_history("c", "k", ph, url_cfg, eng_cfg, P, reply_points=10)[0].points == 10
+    assert signals_from_history("c", "k", ph, url_cfg, eng_cfg, P)[0].points == 0     # por defecto sin puntos

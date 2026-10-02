@@ -190,3 +190,10 @@ Para Gmail hay que activar la verificación en dos pasos en la cuenta de envío 
 - Fase 5: oportunidades, tasas, resultado de llamada, informe mensual, carga de Venzo. Implementado y probado con datos de ejemplo; falta el CSV.
 - Dry-run de HubSpot: 21 propiedades `vt_` se crearían y 8.287 empresas tendrían cambios. No se ha escrito nada.
 - Decisiones: matriz ampliada (B2/C1/C2 llaman con movimiento, A3 rellena); varios proveedores = el más penalizador; control = 2 por SDR de fit A/B sin actividad en 6 meses (supuestos, editables en YAML).
+
+## Cambios de modelo posteriores (2026-10-02)
+- Cobertura medida: para los contactos elegibles se capta el 100 % de la actividad de HubSpot; el ~97 % de los clics de email viene de contactos excluidos (clientes, partners, internos).
+- Clics y sesiones se leen ahora de las fechas de su historial (antes se perdía el primer clic/sesión de cada contacto).
+- La respuesta a un email comercial detectada puntúa 10 de intención (config `intent.weights.reply_detected`), pendiente de que exista la clasificación manual de la SDR.
+- Movimiento = el mayor entre intención y engagement (`priority_matrix.movement: max`), a cero si la intención está congelada.
+- Simulación sobre cuentas elegibles: cuentas con movimiento 7 -> 33.

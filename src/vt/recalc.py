@@ -8,7 +8,7 @@ from .db.batch import Batch
 from .db.conn import connect
 from .scoring.fit import fit_score
 from .scoring.engagement import engagement_score
-from .scoring.intent import intent_score, intent_velocity
+from .scoring.intent import intent_score, intent_velocity, tier_of
 from .scoring.matrix import priority
 from .scoring.persona import persona_score, best_contact, missing_decision_maker
 from .scoring.signals import Signal
@@ -46,8 +46,13 @@ def compute_company(co, contacts, signals, cfgs, now, freeze=None):
          "email_bounced": c["email_bounced"], "linkedin_url": c["linkedin_url"]},
         by_contact.get(c["hs_id"], []), now, cfgs["persona"], cfgs["eng"], cfgs["int"])
         for c in contacts if not c["excluded"]}
-    code, action = priority(fit["tier"], its["tier"], cfgs["matrix"])
+    # Movimiento: 'max' = el mayor entre intención y engagement (la actividad real cuenta aunque no haya visitas de decisión).
+    # Si la intención está congelada ("no interesa"/"ahora no"), no hay movimiento.
+    mv_score = 0.0 if its.get("frozen") else (max(its["score"], eng["score"]) if cfgs["matrix"].get("movement") == "max" else its["score"])
+    mv_tier = tier_of(mv_score, cfgs["int"]["tiers"])
+    code, action = priority(fit["tier"], mv_tier, cfgs["matrix"])
     return {"fit": fit, "engagement": eng, "intent": its, "velocity": vel, "persona": persona,
+            "movement": {"score": round(mv_score, 1), "tier": mv_tier},
             "priority": code, "action": action, "best_contact": best_contact(persona),
             "missing_decision_maker": missing_decision_maker(persona, cfgs["persona"]) if persona else True}
 

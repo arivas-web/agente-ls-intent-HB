@@ -74,3 +74,8 @@ def intent_velocity(signals, now, cfg, url_cfg, **kw):
     past = [s for s in signals if s.at <= before]
     return round(intent_score(signals, now, cfg, url_cfg, **kw)["score"]
                  - intent_score(past, before, cfg, url_cfg)["score"], 1)
+
+
+def tier_of(score, tiers):
+    """Nivel 1/2/3 a partir de una puntuación 0-100 (umbrales de config/intent.yaml)."""
+    return 1 if score >= tiers[1] else 2 if score >= tiers[2] else 3

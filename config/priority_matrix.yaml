@@ -12,3 +12,6 @@ actions:
   C3: fuera
 # Orden de prioridad para el reparto; dentro de cada código, por vt_intent_velocity y luego por fit/engagement.
 order: [A1, A2, B1, B2, C1, C2, A3]
+# Qué mide el segundo dígito del código: 'intent' (solo intención) o 'max' (el mayor entre intención y engagement).
+# Con 'max', un contacto que hace clic/descarga cuenta como movimiento aunque no haya visitado páginas de decisión.
+movement: max

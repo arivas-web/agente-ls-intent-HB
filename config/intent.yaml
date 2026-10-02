@@ -2,6 +2,7 @@ half_life_days: 14
 saturation: 50                       # SUPUESTO inicial, calibrar con datos reales
 tiers: {1: 50, 2: 20}                # 1 >= 50 · 2 20–49 · 3 < 20
 weights:
+  reply_detected: 10          # respuesta a email comercial detectada (sin saber si es positiva); la SDR no la clasifica aún
   positive_reply: 25
   multi_person_7d: 20
   sessions_7d: 15

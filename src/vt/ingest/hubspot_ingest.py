@@ -42,11 +42,12 @@ CT_SQL = """insert into contacts(hs_id,company_hs_id,email,cargo_icp,phones,link
    exclusion_reason=excluded.exclusion_reason, updated_at=now()"""
 SIG_SQL = """insert into signals(company_hs_id,contact_hs_id,kind,type,object_key,occurred_at,points_raw,source,meta)
    values (%s,%s,%s,%s,%s,%s,%s,'hubspot_history',%s)
-   on conflict (contact_hs_id,kind,type,object_key,day) do nothing"""
+   on conflict (contact_hs_id,kind,type,object_key,day) do update set points_raw = excluded.points_raw, meta = excluded.meta"""
 
 
 def main():
     props_cfg, url_cfg, eng_cfg = load("hubspot_properties"), load("url_scoring"), load("engagement")
+    reply_points = load("intent")["weights"]["reply_detected"]
     co, ct, act = props_cfg["company"], props_cfg["contact"], props_cfg["contact_activity"]
     excluded_types = set(props_cfg["excluded_contact_types"])
     c = HubSpotClient()
@@ -99,7 +100,7 @@ def main():
             if reason:
                 continue                                    # excluidos: sin señales
             for s in signals_from_history(r["id"], company_id, r.get("propertiesWithHistory") or {},
-                                          url_cfg, eng_cfg, act):
+                                          url_cfg, eng_cfg, act, reply_points):
                 sgb.add((s.company_id, s.contact_id, s.kind, s.type, s.object_key, s.at, s.points,
                          json.dumps(s.meta)))
                 n_sig += 1
