@@ -1,7 +1,7 @@
 # Lead scoring + intención de compra (Visual Trans)
 
 Prioriza CUENTAS para Emma y Laura (HubSpot) con 4 puntuaciones (fit, engagement, intención, persona), una matriz de
-prioridad y un reparto semanal medible contra un grupo de control. Estado: **Fase 1 completada** (ver `PLAN.md`).
+prioridad y un reparto semanal medible contra un grupo de control. Estado: **fases 1 a 5 implementadas** (ver `PLAN.md`). Pendiente de configuración: secretos de Gmail y Claude, despliegue del dashboard y CSV de Venzo.
 
 ## Arquitectura
 HubSpot = fuente de datos y escaparate (solo lectura; escritura de propiedades `vt_` únicamente con `--apply`, hoy solo dry-run).
@@ -16,7 +16,27 @@ Toda la lógica está en este repositorio y se ejecuta con GitHub Actions. Datos
 | `GMAIL_USER`, `GMAIL_APP_PASSWORD` | Envío de emails (Fase 3), cuenta con verificación en dos pasos |
 Nunca pegues secretos en el chat ni en el código.
 
-## Workflows (todos manuales por ahora)
+## Calendario (cron en UTC con doble hora; el código decide con la hora de Madrid)
+| Trabajo | Madrid | Workflow |
+|---|---|---|
+| Recálculo diario + sync (dry-run) | 03:00 | `daily.yml` |
+| Borrador de la semana siguiente | jueves 09:00 | `draft.yml` |
+| Envío a las SDR (solo si está validado) | lunes 08:00 | `send.yml` |
+| Alertas | L-V 09:00-18:00, cada hora | `alerts.yml` |
+| Informe mensual | día 1, 07:00 | `monthly.yml` |
+| Carga de Venzo | al subir un CSV a `data/venzo/` | `venzo.yml` |
+
+## Escritura en HubSpot
+Siempre DRY-RUN salvo que pongas la variable de repositorio `VT_HUBSPOT_APPLY=true` (Settings > Secrets and variables > Actions > Variables)
+o lances `sync.yml` a mano marcando "apply". Antes crea las propiedades `vt_` (lo hace el propio sync en modo real). Nunca se borra nada.
+El token de HubSpot necesita permiso de escritura en empresas y en propiedades de empresa.
+
+## Dashboard
+Carpeta `dashboard/` (Next.js + Supabase Auth). Ver `dashboard/README.md`: Vercel con Root Directory `dashboard`, variables
+`NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY`, y un usuario creado en Supabase (Auth > Users).
+
+## Workflows
+Los manuales (`probe`, `migrate`, `recalc`, `diag`, `whatif`, `sync`) y los programados de arriba.
 - `probe.yml`: sonda de solo lectura de HubSpot (permisos, volumen, propietarios).
 - `migrate.yml`: aplica `db/migrations/*.sql` (idempotente).
 - `daily.yml`: migración + ingesta de HubSpot + recálculo.

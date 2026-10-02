@@ -180,3 +180,13 @@ Para Gmail hay que activar la verificación en dos pasos en la cuenta de envío 
 4. ~~Reconectar HubSpot con `buyer_intent.read`~~ — descartado.
 5. Nombres de las propiedades de webinars, descargas, newsletter y ferias (los pregunto una a una en la Fase 1).
 6. Identificar a Emma y Laura en HubSpot (owner IDs) para el reparto.
+
+
+## Estado final (2026-10-02)
+- Fase 1: ingesta HubSpot (solo lectura), 4 puntuaciones con desglose, matriz, base de datos, dry-run de `vt_`. Hecho y probado con datos reales.
+- Fase 2: dashboard Next.js con Supabase Auth (Semana siguiente, Cuentas). Compila; pendiente de desplegar y probar contra Supabase.
+- Fase 3: borrador semanal (probado: 20 cuentas, 4 de control, 60 candidatos), validación en dashboard, capa de Claude, emails. Probado sin Claude ni Gmail (faltan secretos).
+- Fase 4: alertas por hora. Implementado y probado con datos de ejemplo.
+- Fase 5: oportunidades, tasas, resultado de llamada, informe mensual, carga de Venzo. Implementado y probado con datos de ejemplo; falta el CSV.
+- Dry-run de HubSpot: 21 propiedades `vt_` se crearían y 8.287 empresas tendrían cambios. No se ha escrito nada.
+- Decisiones: matriz ampliada (B2/C1/C2 llaman con movimiento, A3 rellena); varios proveedores = el más penalizador; control = 2 por SDR de fit A/B sin actividad en 6 meses (supuestos, editables en YAML).
