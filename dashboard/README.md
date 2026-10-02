@@ -53,3 +53,10 @@ Si el borrador está `enviado` o `no_enviado`, todo queda en solo lectura. Se av
 - Solo cuentan eventos dentro del periodo y no anteriores a la semana de asignación.
 - Contacto = llamada con resultado distinto de `no_contesta`; reunión = `reunion`; oportunidad = abierta en el periodo; ganada/perdida = cerrada en el periodo.
 - Si el denominador es 0 se muestra "—".
+
+
+## Si Vercel no despliega (Hobby bloquea commits de otro autor)
+Opción A (recomendada): workflow `deploy-dashboard.yml` con token. Secretos de GitHub: `VERCEL_TOKEN` (Vercel > Settings > Tokens),
+`VERCEL_ORG_ID` y `VERCEL_PROJECT_ID` (en `.vercel/project.json` tras `vercel link`, o Project Settings > General).
+En el proyecto de Vercel: Root Directory = `dashboard` y las variables `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+Opción B: desde tu ordenador, en la carpeta `dashboard`: `npx vercel --prod`.

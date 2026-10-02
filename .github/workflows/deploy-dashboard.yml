@@ -1,0 +1,39 @@
+name: deploy-dashboard
+# Despliega el dashboard en Vercel con un token (evita el bloqueo de Vercel Hobby por el autor del commit).
+# Requiere: secretos VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID, y en el proyecto de Vercel: Root Directory = dashboard
+# y variables NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY.
+on:
+  workflow_dispatch:
+  push:
+    paths: ["dashboard/**"]
+permissions:
+  contents: read
+concurrency: {group: deploy-dashboard, cancel-in-progress: true}
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - name: Comprobar secretos
+        id: chk
+        run: |
+          if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_ORG_ID" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
+            echo "Faltan VERCEL_TOKEN / VERCEL_ORG_ID / VERCEL_PROJECT_ID: no se despliega."; echo "go=false" >> "$GITHUB_OUTPUT"
+          else echo "go=true" >> "$GITHUB_OUTPUT"; fi
+      - uses: actions/checkout@v4
+        if: steps.chk.outputs.go == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.chk.outputs.go == 'true'
+        with: {node-version: "20"}
+      - name: Desplegar
+        if: steps.chk.outputs.go == 'true'
+        run: |
+          npm install --global vercel@latest
+          vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+          vercel build --prod --token="$VERCEL_TOKEN"
+          vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN" | tee deploy.txt
+          echo "URL: $(tail -n1 deploy.txt)"
