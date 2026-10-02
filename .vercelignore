@@ -1,0 +1,9 @@
+# Lo que NO debe subirse a Vercel (datos comerciales y código del motor).
+data/
+src/
+tests/
+db/
+config/
+.github/
+*.md
+!dashboard/README.md
