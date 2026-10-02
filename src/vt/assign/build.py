@@ -7,6 +7,8 @@ TIER_ORDER = {"A": 0, "B": 1, "C": 2}
 
 def is_eligible(c, cfg, open_opportunity_ids=frozenset()):
     """c: dict con status, tipo_de_contacto, hs_id."""
+    if c.get("internal"):
+        return False
     if c.get("status") in set(cfg["excluded_statuses"]):
         return False
     if c.get("tipo_de_contacto") in set(cfg.get("excluded_company_types", [])):

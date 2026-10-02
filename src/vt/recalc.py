@@ -65,7 +65,7 @@ def main():
     with connect() as conn:
         cur = conn.cursor()
         cos = [dict(zip(("hs_id", "target_market", "proveedor", "pais"), r)) for r in
-               cur.execute("select hs_id,target_market,proveedor,pais from companies")]
+               cur.execute("select hs_id,target_market,proveedor,pais from companies where not internal")]
         cts = defaultdict(list)
         for r in cur.execute("select hs_id,company_hs_id,email,cargo_icp,phones,linkedin_url,email_bounced,excluded from contacts"):
             cts[r[1]].append(dict(zip(("hs_id", "company", "email", "cargo_icp", "phones", "linkedin_url",

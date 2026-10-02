@@ -25,7 +25,7 @@ def load_scores(conn):
                c.proveedor, c.pais, s.fit, s.fit_tier, s.engagement, s.intent, s.intent_tier, s.intent_velocity,
                s.priority, s.action, s.best_contact, s.missing_decision_maker
         from company_scores_daily s join companies c on c.hs_id = s.company_hs_id
-        where s.date = (select max(date) from company_scores_daily)""")
+        where s.date = (select max(date) from company_scores_daily) and not c.internal""")
     keys = ("hs_id", "name", "status", "tipo_de_contacto", "last_activity_at", "target_market", "proveedor", "pais",
             "fit", "fit_tier", "engagement", "intent", "intent_tier", "velocity", "code", "action", "best_contact",
             "missing_decision_maker")

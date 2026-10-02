@@ -12,3 +12,7 @@ control_min_fit_tier: B           # SUPUESTO: el grupo de control sale de cuenta
 candidate_pool_size: 60           # candidatos ordenados que se guardan para "sustituir por la siguiente"
 random_seed_salt: "vt"            # la semilla = salt + fecha de la semana; se guarda para reproducir el sorteo
 excluded_company_types: [Asociaciones del sector, Cliente, Competencia, Partner, Prensa]
+# Empresas propias: nunca se reparten, no generan alertas ni puntuaciones y sus contactos se excluyen.
+# Se comparan por nombre normalizado EXACTO (sin S.L./S.A.); sus dominios en HubSpot se añaden solos a los internos.
+internal_company_names: [Visual Trans, Visual Microsystems, Docuten]
+internal_domains: [visualtrans.com, visualms.com]

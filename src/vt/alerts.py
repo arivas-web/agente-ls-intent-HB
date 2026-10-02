@@ -47,7 +47,7 @@ def main():
     with connect() as conn:
         tier = {r[0]: (r[1], r[2]) for r in conn.execute("""select s.company_hs_id, s.fit_tier, c.name from company_scores_daily s
             join companies c on c.hs_id = s.company_hs_id where s.date = (select max(date) from company_scores_daily)
-            and s.fit_tier = any(%s) and coalesce(c.status,'') <> all(%s)""", (cfg["fit_tiers"], cfg["exclude_statuses"]))}
+            and s.fit_tier = any(%s) and not c.internal and coalesce(c.status,'') <> all(%s)""", (cfg["fit_tiers"], cfg["exclude_statuses"]))}
         sigs = defaultdict(list)
         for r in conn.execute("""select company_hs_id, contact_hs_id, type, meta->>'rule_id', occurred_at from signals
             where occurred_at > now() - interval '3 days' and points_raw > 0"""):

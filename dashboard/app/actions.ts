@@ -116,6 +116,6 @@ export async function searchCompanies(q: string): Promise<{ hs_id: string; name:
   const s = safeLike(q);
   if (s.length < 2) return [];
   const sb = createClient();
-  const { data } = await sb.from("companies").select("hs_id,name,domain").ilike("name", `%${s}%`).order("name").limit(15);
+  const { data } = await sb.from("companies").select("hs_id,name,domain").eq("internal", false).ilike("name", `%${s}%`).order("name").limit(15);
   return (data ?? []) as { hs_id: string; name: string | null; domain: string | null }[];
 }

@@ -20,7 +20,7 @@ def main():
             join company_scores_daily s on s.company_hs_id = c.company_hs_id
               and s.date = (select max(date) from company_scores_daily)
             join companies co on co.hs_id = c.company_hs_id
-            where s.fit_tier = 'A' and not c.excluded and coalesce(co.status,'') not in ('Client','Discarded')""").fetchall()
+            where s.fit_tier = 'A' and not co.internal and not c.excluded and coalesce(co.status,'') not in ('Client','Discarded')""").fetchall()
         comp = {r[0]: r[1] for r in rows}
         ids = list(comp)
         sgb, n = Batch(conn, SIG_SQL), 0

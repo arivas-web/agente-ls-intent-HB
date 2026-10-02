@@ -5,6 +5,7 @@ from ..config import load
 from ..db.batch import Batch
 from ..db.conn import connect
 from ..hubspot.client import HubSpotClient
+from ..venzo.match import norm_domain, norm_name
 from .outcomes import record_outcomes
 from .history import signals_from_history, parse_ts
 
@@ -28,12 +29,12 @@ def iter_objects(c, object_type, props, history=None, associations=None):
             return
 
 
-CO_SQL = """insert into companies(hs_id,name,domain,target_market,proveedor,pais,status,tipo_de_contacto,last_activity_at,updated_at)
-   values (%s,%s,%s,%s,%s,%s,%s,%s,%s,now())
+CO_SQL = """insert into companies(hs_id,name,domain,target_market,proveedor,pais,status,tipo_de_contacto,last_activity_at,internal,updated_at)
+   values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,now())
    on conflict (hs_id) do update set name=excluded.name, domain=excluded.domain,
    target_market=excluded.target_market, proveedor=excluded.proveedor, pais=excluded.pais,
    status=excluded.status, tipo_de_contacto=excluded.tipo_de_contacto,
-   last_activity_at=excluded.last_activity_at, updated_at=now()"""
+   last_activity_at=excluded.last_activity_at, internal=excluded.internal, updated_at=now()"""
 CT_SQL = """insert into contacts(hs_id,company_hs_id,email,cargo_icp,phones,linkedin_url,email_bounced,excluded,exclusion_reason,updated_at)
    values (%s,%s,%s,%s,%s,%s,%s,%s,%s,now())
    on conflict (hs_id) do update set company_hs_id=excluded.company_hs_id, email=excluded.email,
@@ -50,6 +51,10 @@ def main():
     reply_points = load("intent")["weights"]["reply_detected"]
     co, ct, act = props_cfg["company"], props_cfg["contact"], props_cfg["contact_activity"]
     excluded_types = set(props_cfg["excluded_contact_types"])
+    acfg = load("assignment")
+    own_names = {norm_name(n) for n in acfg["internal_company_names"]}
+    own_domains = {norm_domain(d) for d in acfg["internal_domains"]}
+    own_ids = set()
     c = HubSpotClient()
 
     company_props = ["name", "domain", co["target_market"], co["proveedor_actual"], co["ubicacion"],
@@ -69,13 +74,20 @@ def main():
             last = max((parse_ts(x) for x in acts), default=None)
             tipo = p.get(co["tipo_de_contacto"])
             co_excluded[r["id"]] = tipo in excluded_types
+            is_own = norm_name(p.get("name")) in own_names
+            if is_own:
+                own_ids.add(r["id"])
+                own_domains.add(norm_domain(p.get("domain")))
+                co_excluded[r["id"]] = True
             if p.get("vt_call_outcome"):
                 outcomes[r["id"]] = p["vt_call_outcome"]
             cob.add((r["id"], p.get("name"), p.get("domain"), p.get(co["target_market"]),
                      p.get(co["proveedor_actual"]), p.get(co["ubicacion"]), p.get(co["estado_prospeccion"]),
-                     tipo, last))
+                     tipo, last, is_own))
             n_co += 1
         cob.flush()
+        own_domains.discard("")
+        print("empresas propias excluidas:", len(own_ids), "| dominios internos:", sorted(own_domains))
         print("empresas:", n_co, "| resultados de llamada nuevos:", record_outcomes(conn, outcomes))
         conn.commit()
 
@@ -87,7 +99,10 @@ def main():
             company_id = assoc[0]["id"] if assoc else None
             email = (p.get("email") or "").lower()
             reason = None
-            if email.endswith("@visualtrans.com"):
+            own_domains.discard("")
+            if company_id in own_ids:
+                reason = "empresa_propia"
+            elif email.rsplit("@", 1)[-1] in own_domains:
                 reason = "interno"
             elif company_id and co_excluded.get(company_id):
                 reason = "tipo_de_contacto_empresa"

@@ -86,3 +86,14 @@ def test_proximo_lunes():
     from vt.assign.draft import next_monday
     assert next_monday(datetime(2026, 10, 1, 9, tzinfo=ZoneInfo("Europe/Madrid"))) == date(2026, 10, 5)   # jueves
     assert next_monday(datetime(2026, 10, 5, 9, tzinfo=ZoneInfo("Europe/Madrid"))) == date(2026, 10, 12)  # lunes -> siguiente
+
+
+def test_empresas_propias_nunca_se_reparten():
+    from vt.venzo.match import norm_name
+    assert not is_eligible({**row(1, "A1"), "internal": True}, CFG)
+    own = {norm_name(n) for n in CFG["internal_company_names"]}
+    for name in ("Visual Trans, S.L.", "VISUAL MICROSYSTEMS S.L.U.", "Docuten", "docuten sl"):
+        assert norm_name(name) in own, name
+    assert norm_name("Visual Transitarios SL") not in own          # nombre exacto: no hay falsos positivos
+    asg, _ = build_draft([{**row(i, "A1"), "internal": i < 5} for i in range(40)], CFG, M, seed="s")
+    assert not ({a["hs_id"] for a in asg} & {str(i) for i in range(5)})
