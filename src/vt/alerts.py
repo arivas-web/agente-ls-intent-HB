@@ -69,9 +69,11 @@ def main():
                 sdr = pick_sdr(assigned.get(cid), load_by, sdrs)
                 subj, html, text = render.alert(tier[cid][1] or cid, sdr, reason, detail)
                 ok = send(subj, html, text, ecfg["recipients"]["alerts"])
+                if not ok:      # sin credenciales o fallo de envío: NO se da por enviada (se reintentará en la siguiente hora)
+                    continue
                 conn.execute("insert into alerts_sent(company_hs_id, reason, sdr) values (%s,%s,%s)", (cid, reason, sdr))
                 updates.setdefault(cid, {}).update({"vt_last_alert_at": now.date().isoformat(), "vt_last_alert_reason": reason})
-                sent += bool(ok)
+                sent += 1
                 recent.add((cid, reason))
         if updates:
             apply = os.environ.get("VT_HUBSPOT_APPLY") == "true"
