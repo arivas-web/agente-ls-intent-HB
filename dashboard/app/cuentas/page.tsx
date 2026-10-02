@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { DbError, Empty, d10, n0, show, Badge } from "@/components/ui";
+import { DbError, Empty, Meters, QualityBadge, show } from "@/components/ui";
+import { ago } from "@/lib/activity";
 import { LEVELS } from "@/lib/config";
 import { FIT_TIERS, INTENT_TIERS, INTERACTION, SORTS, STATUSES, TARGETS, applyFilters, parseFilters, toQuery } from "@/lib/accounts";
 import type { CompanyOverview } from "@/lib/types";
@@ -8,7 +9,15 @@ import type { CompanyOverview } from "@/lib/types";
 export const dynamic = "force-dynamic";
 const PAGE = 25;
 
-const tierTone = (t: string | null) => (t === "A" ? "ok" : t === "B" ? "warn" : "neutral");
+const d = (v: string | null) => (v ? v.slice(0, 10) : "");
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+function activityText(c: CompanyOverview): string {
+  const parts: string[] = [];
+  if (c.visits_30d) parts.push(`${plural(c.visits_30d, "visita", "visitas")} a la web`);
+  if (c.email_clicks_30d) parts.push(`${plural(c.email_clicks_30d, "clic", "clics")} en correos`);
+  if (c.active_contacts_30d > 1) parts.push(`${c.active_contacts_30d} personas activas`);
+  return parts.length ? parts.join(" · ") : "Sin actividad";
+}
 
 export default async function Cuentas({ searchParams }: { searchParams: Record<string, string | string[] | undefined> }) {
   const f = parseFilters(searchParams);
@@ -35,26 +44,21 @@ export default async function Cuentas({ searchParams }: { searchParams: Record<s
           <table>
             <thead>
               <tr>
-                <th>Empresa</th><th>Prioridad</th><th className="num">Fit</th><th className="num">Engag.</th>
-                <th className="num">Intención</th><th className="num">Vel.</th>
-                <th className="num">Inter. 7d</th><th className="num">Inter. 30d</th><th className="num">Visitas 30d</th>
-                <th className="num">Clics 30d</th><th className="num">Contactos activos</th><th>Última interacción</th>
-                <th>Estado</th><th>Target market</th>
+                <th>Empresa</th><th>Calidad</th><th>Perfil · Actividad · Intención</th>
+                <th>Qué ha hecho (30 días)</th><th>Última acción</th><th>Estado</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((c) => (
                 <tr key={c.hs_id}>
-                  <td className="wrap"><Link href={`/cuentas/${encodeURIComponent(c.hs_id)}`}>{c.name ?? c.hs_id}</Link>
-                    <div className="muted small">{show(c.domain)}</div></td>
-                  <td>{c.priority ? <Badge tone={tierTone(c.fit_tier)}>{c.priority}</Badge> : "—"}</td>
-                  <td className="num">{n0(c.fit)}</td><td className="num">{n0(c.engagement)}</td>
-                  <td className="num">{n0(c.intent)}</td>
-                  <td className="num">{c.intent_velocity === null ? "—" : `${c.intent_velocity > 0 ? "+" : ""}${n0(c.intent_velocity)}`}</td>
-                  <td className="num">{c.signals_7d}</td><td className="num">{c.signals_30d}</td>
-                  <td className="num">{c.visits_30d}</td><td className="num">{c.email_clicks_30d}</td>
-                  <td className="num">{c.active_contacts_30d}</td><td>{d10(c.last_signal_at)}</td>
-                  <td>{show(c.status)}</td><td className="wrap">{show(c.target_market)}</td>
+                  <td className="wrap"><Link href={`/cuentas/${encodeURIComponent(c.hs_id)}`}><b>{c.name ?? c.hs_id}</b></Link>
+                    <div className="muted small">{[c.target_market, c.domain].filter(Boolean).join(" · ")}</div></td>
+                  <td><QualityBadge priority={c.priority} /></td>
+                  <td><Meters fit={c.fit} engagement={c.engagement} intent={c.intent} />
+                    {c.intent_velocity !== null && Number(c.intent_velocity) > 0 && <div className="small" style={{ color: "var(--ok)", marginTop: 4 }}>▲ Intención subiendo</div>}</td>
+                  <td className="small">{activityText(c)}</td>
+                  <td className="small" title={d(c.last_signal_at)}>{ago(c.last_signal_at)}</td>
+                  <td>{show(c.status)}</td>
                 </tr>
               ))}
             </tbody>
@@ -88,12 +92,12 @@ export default async function Cuentas({ searchParams }: { searchParams: Record<s
           {sel("status", f.status, [["", "Todos"], ...STATUSES.map((s): [string, string] => [s, s])], "Estado")}
           {sel("target", f.target, [["", "Todos"], ...TARGETS.map((s): [string, string] => [s, s])], "Target market")}
         </div>
-        <h3>Puntuación</h3>
+        <h3>Calidad</h3>
         <div className="row">
           {sel("priority", f.priority, [["", "Todas"], ...LEVELS.map((s): [string, string] => [s, s])], "Prioridad")}
-          {sel("fit_tier", f.fit_tier, [["", "Todos"], ...FIT_TIERS.map((s): [string, string] => [s, `Fit ${s}`])], "Nivel de fit")}
+          {sel("fit_tier", f.fit_tier, [["", "Todos"], ...FIT_TIERS.map((s): [string, string] => [s, `Perfil ${s}`])], "Nivel de perfil")}
           {sel("intent_tier", f.intent_tier, [["", "Todos"], ...INTENT_TIERS.map((s): [string, string] => [s, `Intención ${s}`])], "Nivel de intención")}
-          {numIn("fit_min", f.fit_min, "Fit ≥")}{numIn("eng_min", f.eng_min, "Engagement ≥")}{numIn("int_min", f.int_min, "Intención ≥")}
+          {numIn("fit_min", f.fit_min, "Perfil ≥")}{numIn("eng_min", f.eng_min, "Actividad ≥")}{numIn("int_min", f.int_min, "Intención ≥")}
           <label style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
             <input type="checkbox" name="rising" value="1" defaultChecked={f.rising} /> Intención subiendo
           </label>

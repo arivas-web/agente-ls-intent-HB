@@ -4,7 +4,8 @@ import { companiesByIds, fetchAll, inChunks, latestScores } from "@/lib/db";
 import { ACCOUNTS_PER_SDR, SDRS } from "@/lib/config";
 import type { Assignment, Candidate, Contact, Draft } from "@/lib/types";
 import { AddManual, RowActions, ValidateButton } from "@/components/DraftControls";
-import { Badge, DbError, Empty, StatusBadge, n0, n1, short } from "@/components/ui";
+import { Badge, DbError, Empty, Meters, QualityBadge, StatusBadge, short } from "@/components/ui";
+import { mergeActivities, oneLiner, qualityOf } from "@/lib/activity";
 
 export const dynamic = "force-dynamic";
 
@@ -67,42 +68,39 @@ export default async function SemanaSiguiente({ searchParams }: { searchParams: 
             <section key={sdr}>
               <h2>{sdr} <span className="muted">({rows.length})</span></h2>
               {rows.length ? (
-                <div className="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Empresa</th><th>Prioridad</th><th className="num">Fit</th><th className="num">Engag.</th><th className="num">Intención</th><th className="num">Velocidad</th>
-                        <th>Contacto recomendado</th><th>Control</th><th>Motivo</th>{!readOnly && <th>Acciones</th>}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {rows.map((a) => {
-                        const co = companies.get(a.company_hs_id);
-                        const sc = scores.get(a.company_hs_id);
-                        const cd = candMap.get(a.company_hs_id);
-                        const bc = sc?.best_contact ? contacts.get(sc.best_contact) : undefined;
-                        const name = co?.name ?? a.company_hs_id;
-                        return (
-                          <tr key={a.id}>
-                            <td className="wrap">
-                              <Link href={`/cuenta/${encodeURIComponent(a.company_hs_id)}?draft=${draft.id}`}>{name}</Link>
-                              {a.added_manually && <> <Badge>Manual</Badge></>}
-                              {a.sdr_original && a.sdr_original !== a.sdr && <> <Badge>Antes {a.sdr_original}</Badge></>}
-                            </td>
-                            <td><Badge tone="accent">{cd?.code ?? sc?.priority ?? "—"}</Badge></td>
-                            <td className="num">{n0(cd?.fit ?? sc?.fit)}</td>
-                            <td className="num">{n0(cd?.engagement ?? sc?.engagement)}</td>
-                            <td className="num">{n0(cd?.intent ?? sc?.intent)}</td>
-                            <td className="num">{n1(cd?.velocity ?? sc?.intent_velocity)}</td>
-                            <td className="wrap">{bc ? <>{bc.email ?? bc.hs_id}<br /><span className="muted small">{bc.cargo_icp ?? "—"}</span></> : "—"}</td>
-                            <td>{a.is_control ? "Sí" : "No"}</td>
-                            <td className="wrap small">{short(a.claude?.vt_why_now)}</td>
-                            {!readOnly && <td><RowActions id={a.id} sdr={a.sdr} name={name} /></td>}
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                <div className="acct-grid">
+                  {rows.map((a) => {
+                    const co = companies.get(a.company_hs_id);
+                    const sc = scores.get(a.company_hs_id);
+                    const cd = candMap.get(a.company_hs_id);
+                    const bc = sc?.best_contact ? contacts.get(sc.best_contact) : undefined;
+                    const name = co?.name ?? a.company_hs_id;
+                    const prio = cd?.code ?? sc?.priority ?? null;
+                    const acts = mergeActivities(sc?.breakdown?.intent?.signals, sc?.breakdown?.engagement?.signals);
+                    return (
+                      <article key={a.id} className={`acct ${qualityOf(prio).tone}`}>
+                        <div className="acct-head">
+                          <div>
+                            <Link className="acct-name" href={`/cuenta/${encodeURIComponent(a.company_hs_id)}?draft=${draft.id}`}>{name}</Link>
+                            <div className="acct-sub">{[co?.target_market, co?.pais].filter(Boolean).join(" · ") || co?.domain || ""}</div>
+                          </div>
+                          <QualityBadge priority={prio} />
+                        </div>
+                        <div className="acct-line">{oneLiner(acts)}</div>
+                        <Meters fit={cd?.fit ?? sc?.fit} engagement={cd?.engagement ?? sc?.engagement} intent={cd?.intent ?? sc?.intent} />
+                        {a.claude?.vt_why_now && <div className="ai"><div className="tag">✦ Por qué ahora</div><div>{short(a.claude.vt_why_now, 220)}</div></div>}
+                        <div className="acct-foot">
+                          <span className="small">{bc ? <>📞 <b>{bc.email ?? bc.hs_id}</b> <span className="muted">{bc.cargo_icp ?? ""}</span></> : <span className="muted">Sin contacto recomendado</span>}</span>
+                          <span>
+                            {a.is_control && <Badge>Control</Badge>}
+                            {a.added_manually && <> <Badge>Manual</Badge></>}
+                            {a.sdr_original && a.sdr_original !== a.sdr && <> <Badge>Antes {a.sdr_original}</Badge></>}
+                          </span>
+                        </div>
+                        {!readOnly && <RowActions id={a.id} sdr={a.sdr} name={name} />}
+                      </article>
+                    );
+                  })}
                 </div>
               ) : <Empty>Sin cuentas.</Empty>}
             </section>

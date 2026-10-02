@@ -1,5 +1,7 @@
 import { LineChart } from "./Charts";
-import { Badge, Empty, d10, n0, n1, show, StatusBadge } from "./ui";
+import ActivityFeed from "./ActivityFeed";
+import { Badge, Empty, QualityBadge, d10, n0, n1, show, StatusBadge } from "./ui";
+import { describeSignal, mergeActivities, qualityOf } from "@/lib/activity";
 import { OUTCOME_LABEL, ORIGIN_LABEL } from "@/lib/config";
 import type { AccountData } from "@/lib/account";
 import type { Signal } from "@/lib/types";
@@ -7,23 +9,23 @@ import type { Signal } from "@/lib/types";
 const MAX_SIGNALS = 60;
 
 function SignalsTable({ signals, who }: { signals: Signal[] | undefined; who: (id: string | null | undefined) => string }) {
-  if (!signals?.length) return <Empty>Sin señales.</Empty>;
+  if (!signals?.length) return <Empty>Sin actividad.</Empty>;
   const sorted = [...signals].sort((a, b) => (b.at ?? "").localeCompare(a.at ?? ""));
   return (
     <div className="table-wrap">
       <table>
-        <thead><tr><th>Fecha</th><th>Contacto</th><th>Tipo</th><th>URL / acción</th><th className="num">Puntos base</th><th className="num">Puntos (con decaimiento)</th></tr></thead>
+        <thead><tr><th>Fecha</th><th>Contacto</th><th>Acción</th><th>Detalle</th><th className="num">Puntos</th><th className="num">Puntos hoy</th></tr></thead>
         <tbody>
           {sorted.slice(0, MAX_SIGNALS).map((s, i) => (
             <tr key={i}>
-              <td>{d10(s.at)}</td><td className="wrap">{who(s.contact_id)}</td><td>{s.type ?? "—"}</td>
+              <td>{d10(s.at)}</td><td className="wrap">{who(s.contact_id)}</td><td>{describeSignal(s).icon} {describeSignal(s).text}</td>
               <td className="wrap">{s.object ? (/^https?:/.test(s.object) ? <a href={s.object} target="_blank" rel="noreferrer">{s.object}</a> : s.object) : "—"}</td>
               <td className="num">{n1(s.raw_points)}</td><td className="num">{n1(s.points)}</td>
             </tr>
           ))}
         </tbody>
       </table>
-      {sorted.length > MAX_SIGNALS && <p className="muted small" style={{ padding: "0 10px" }}>Mostrando {MAX_SIGNALS} de {sorted.length} señales (las más recientes).</p>}
+      {sorted.length > MAX_SIGNALS && <p className="muted small" style={{ padding: "0 10px" }}>Mostrando {MAX_SIGNALS} de {sorted.length} acciones (las más recientes).</p>}
     </div>
   );
 }
@@ -40,79 +42,87 @@ export default function AccountDetail({ data, showHistory = false }: { data: Acc
   return (
     <div>
       <div className="card">
-        <h1>{company.name ?? company.hs_id}</h1>
-        <dl className="kv">
-          <dt>Dominio</dt><dd>{show(company.domain)}</dd>
-          <dt>Target market</dt><dd>{show(company.target_market)}</dd>
-          <dt>Proveedor actual</dt><dd>{show(company.proveedor)}</dd>
-          <dt>País</dt><dd>{show(company.pais)}</dd>
-          <dt>Estado</dt><dd>{show(company.status)} {company.tipo_de_contacto ? `· ${company.tipo_de_contacto}` : ""}</dd>
-          <dt>Última actividad</dt><dd>{d10(company.last_activity_at)}</dd>
-          <dt>Foto de puntuación</dt><dd>{score ? d10(score.date) : "Sin puntuación"}</dd>
-        </dl>
-        {score && (
-          <p>
-            <Badge tone="accent">Prioridad {score.priority ?? "—"}</Badge>{" "}
-            <Badge>Fit {n0(score.fit)} ({score.fit_tier ?? "—"})</Badge>{" "}
-            <Badge>Engagement {n0(score.engagement)}</Badge>{" "}
-            <Badge>Intención {n0(score.intent)} (nivel {score.intent_tier ?? "—"})</Badge>{" "}
-            <Badge>Velocidad {n1(score.intent_velocity)}</Badge>{" "}
-            {score.action && <Badge>{score.action}</Badge>}{" "}
-            {score.missing_decision_maker && <Badge tone="warn">Falta decisor</Badge>}
-            {bd.intent?.frozen && <> <Badge tone="warn">Intención congelada</Badge></>}
-          </p>
-        )}
+        <div className="hero">
+          <div>
+            <h1>{company.name ?? company.hs_id}</h1>
+            <div className="muted">{[company.target_market, company.pais, company.domain].filter(Boolean).join(" · ") || "—"}</div>
+            <div className="chips">
+              <QualityBadge priority={score?.priority} />
+              {score?.priority && <Badge tone="accent">Prioridad {score.priority}</Badge>}
+              {company.status && <Badge>{company.status}</Badge>}
+              {company.proveedor && <Badge>Usa {company.proveedor}</Badge>}
+              {score?.missing_decision_maker && <Badge tone="warn">Falta decisor</Badge>}
+              {bd.intent?.frozen && <Badge tone="warn">Intención congelada</Badge>}
+            </div>
+            {score && <p className="muted small" style={{ margin: "8px 0 0" }}>{qualityOf(score.priority).hint}</p>}
+          </div>
+          {score && (
+            <div className="big-meters">
+              {[["Perfil", score.fit], ["Actividad", score.engagement], ["Intención", score.intent]].map(([l, v]) => (
+                <div className="big" key={String(l)}>
+                  <div className="n">{n0(v as number | null)}</div><div className="l">{String(l)}</div>
+                  <div className="t"><i style={{ width: `${Math.min(100, Number(v ?? 0))}%` }} /></div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {claude ? (
-        <div className="card">
-          <h2 style={{ marginTop: 0 }}>Resumen de Claude</h2>
-          <dl className="kv">
-            <dt>Por qué ahora</dt><dd className="pre">{show(claude.vt_why_now)}</dd>
-            <dt>Ángulo y objeción</dt><dd className="pre">{show(claude.vt_angle)}</dd>
-            <dt>Contacto recomendado</dt><dd className="pre">{show(claude.contact_justification)}</dd>
-            <dt>Intención IA</dt><dd>{claude.vt_ai_intent ? `${claude.vt_ai_intent}/5` : "—"}{claude.vt_ai_intent_reason ? ` · ${claude.vt_ai_intent_reason}` : ""}</dd>
-          </dl>
+        <div className="ai-card">
+          <h2><span className="spark">✦</span> Resumen de Claude</h2>
+          <div className="ai-item"><b>Por qué ahora</b><div className="pre">{show(claude.vt_why_now)}</div></div>
+          <div className="ai-item"><b>Ángulo y objeción</b><div className="pre">{show(claude.vt_angle)}</div></div>
+          <div className="ai-item"><b>Contacto recomendado</b><div className="pre">{show(claude.contact_justification)}</div></div>
+          {claude.vt_ai_intent ? <div className="ai-item"><b>Intención según IA</b><div>{claude.vt_ai_intent}/5{claude.vt_ai_intent_reason ? ` · ${claude.vt_ai_intent_reason}` : ""}</div></div> : null}
         </div>
       ) : (
-        <p className="muted">Sin resumen de Claude para esta cuenta{assignment ? " (cuenta sustituida o añadida a mano)" : ""}.</p>
+        <p className="muted">✦ Sin resumen de Claude para esta cuenta{assignment ? " (cuenta sustituida o añadida a mano)" : ""}.</p>
       )}
 
-      <h2>Fit</h2>
-      {score ? (
-        <div className="table-wrap">
-          <table>
-            <thead><tr><th>Criterio</th><th>Valor que lo genera</th><th className="num">Puntos</th></tr></thead>
-            <tbody>
-              <tr><td>Target market</td><td>{show(fit.target_market?.value)}</td><td className="num">{n1(fit.target_market?.points)}</td></tr>
-              <tr>
-                <td>Proveedor</td>
-                <td className="wrap">{show(prov.value)}{prov.canonico ? ` → ${show(prov.canonico)}` : ""}{prov.metodo ? ` (${show(prov.metodo)})` : ""}{prov.multiples ? ` · múltiples: ${show(prov.multiples)}` : ""}</td>
-                <td className="num">{n1(prov.points)}</td>
-              </tr>
-              <tr><td>Ubicación</td><td>{show(fit.ubicacion?.value)}</td><td className="num">{n1(fit.ubicacion?.points)}</td></tr>
-              <tr><td><strong>Total fit</strong></td><td>Nivel {score.fit_tier ?? "—"}</td><td className="num"><strong>{n0(score.fit)}</strong></td></tr>
-            </tbody>
-          </table>
-        </div>
-      ) : <Empty>Esta cuenta aún no tiene puntuación.</Empty>}
+      <h2>Qué ha hecho esta cuenta</h2>
+      <div className="card">
+        <ActivityFeed items={mergeActivities(bd.intent?.signals, bd.engagement?.signals)} who={who} limit={15} />
+      </div>
 
-      <h2>Intención {score ? `(${n0(score.intent)}, nivel ${score.intent_tier ?? "—"})` : ""}</h2>
-      <SignalsTable signals={bd.intent?.signals} who={who} />
-
-      <h2>Engagement {score ? `(${n0(score.engagement)})` : ""}</h2>
-      {bd.engagement && (
-        <p className="muted small">
-          Bruto {n1(bd.engagement.raw)} · contactos activos {show(bd.engagement.active_contacts)} · multiplicador por amplitud {show(bd.engagement.breadth_multiplier)}
-        </p>
-      )}
-      <SignalsTable signals={bd.engagement?.signals} who={who} />
+      <details className="tech">
+        <summary>Ver cómo se calcula la puntuación (detalle técnico)</summary>
+        <h2>Perfil (fit)</h2>
+        {score ? (
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Criterio</th><th>Valor que lo genera</th><th className="num">Puntos</th></tr></thead>
+              <tbody>
+                <tr><td>Target market</td><td>{show(fit.target_market?.value)}</td><td className="num">{n1(fit.target_market?.points)}</td></tr>
+                <tr>
+                  <td>Proveedor</td>
+                  <td className="wrap">{show(prov.value)}{prov.canonico ? ` → ${show(prov.canonico)}` : ""}{prov.metodo ? ` (${show(prov.metodo)})` : ""}{prov.multiples ? ` · múltiples: ${show(prov.multiples)}` : ""}</td>
+                  <td className="num">{n1(prov.points)}</td>
+                </tr>
+                <tr><td>Ubicación</td><td>{show(fit.ubicacion?.value)}</td><td className="num">{n1(fit.ubicacion?.points)}</td></tr>
+                <tr><td><strong>Total</strong></td><td>Nivel {score.fit_tier ?? "—"}</td><td className="num"><strong>{n0(score.fit)}</strong></td></tr>
+              </tbody>
+            </table>
+          </div>
+        ) : <Empty>Esta cuenta aún no tiene puntuación.</Empty>}
+        {score && <p className="muted small">Foto de {d10(score.date)} · intención nivel {score.intent_tier ?? "—"} · velocidad {n1(score.intent_velocity)} · última actividad en HubSpot {d10(company.last_activity_at)}</p>}
+        <h2>Señales de intención {score ? `(${n0(score.intent)})` : ""}</h2>
+        <SignalsTable signals={bd.intent?.signals} who={who} />
+        <h2>Señales de actividad {score ? `(${n0(score.engagement)})` : ""}</h2>
+        {bd.engagement && (
+          <p className="muted small">
+            Bruto {n1(bd.engagement.raw)} · contactos activos {show(bd.engagement.active_contacts)} · multiplicador por amplitud {show(bd.engagement.breadth_multiplier)}
+          </p>
+        )}
+        <SignalsTable signals={bd.engagement?.signals} who={who} />
+      </details>
 
       <h2>Contactos</h2>
       {contacts.length ? (
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Contacto</th><th>Cargo</th><th className="num">Persona</th><th className="num">Cargo</th><th className="num">Engagement</th><th className="num">Contactab.</th><th>Buyer persona sugerido</th></tr></thead>
+            <thead><tr><th>Contacto</th><th>Cargo</th><th className="num">Persona</th><th className="num">Cargo</th><th className="num">Actividad</th><th className="num">Contactab.</th><th>Buyer persona sugerido</th></tr></thead>
             <tbody>
               {contacts.map((c) => {
                 const cs = contactScores.get(c.hs_id);
