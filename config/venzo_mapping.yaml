@@ -1,0 +1,15 @@
+# Mapeo de columnas del CSV de Venzo -> campos del sistema.
+# PENDIENTE: se rellena cuando llegue el CSV (se propone el mapeo y se confirma antes de usarlo).
+folder: data/venzo/          # se usa siempre el CSV más reciente de esta carpeta
+columns:
+  cif: null
+  domain: null
+  name: null
+  opportunity_id: null
+  stage: null
+  status: null
+  loss_reason: null
+  opened_at: null
+  closed_at: null
+  last_activity: null
+  notes: null
