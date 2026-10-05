@@ -5,7 +5,7 @@ sdrs:                          # owner IDs de HubSpot (comprobados con la sonda 
   Laura: {owner_id: "29743324"}   # Laura Díaz
 draft:  {weekday: thu, time: "09:00", tz: Europe/Madrid}   # supuesto, cambiable
 send:   {weekday: mon, time: "08:00", tz: Europe/Madrid}   # confirmado
-excluded_statuses: [Client, Account, On prospection, Engaged, Contacted, Meeting]
+excluded_statuses: [Client, On prospection, Engaged, Contacted, Meeting]
 inactivity_months_for_control: 6
 control_per_sdr: 2               # SUPUESTO: de las 10 cuentas por SDR, 2 son grupo de control (aleatorias, sin actividad en 6 meses)
 control_min_fit_tier: B           # SUPUESTO: el grupo de control sale de cuentas de fit A o B (evita basura C)
