@@ -26,7 +26,12 @@ def selftest():
         p = subprocess.run(["claude", "-p", "Responde solo con la palabra OK", "--output-format", "json"],
                            capture_output=True, text=True, timeout=120)
         print("prueba claude: exit", p.returncode)
-        print("stdout:", (p.stdout or "").strip()[:400])
+        try:
+            o = json.loads(p.stdout)
+            print("is_error:", o.get("is_error"), "| subtype:", o.get("subtype"), "| api_error_status:", o.get("api_error_status"))
+            print("result:", str(o.get("result"))[:500])
+        except ValueError:
+            print("stdout:", (p.stdout or "").strip()[:400])
         print("stderr:", (p.stderr or "").strip()[:400])
     except Exception as e:  # diagnóstico, nunca debe romper el flujo
         print("prueba claude: error", type(e).__name__, str(e)[:200])
