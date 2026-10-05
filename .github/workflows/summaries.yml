@@ -18,6 +18,12 @@ jobs:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       SCHEDULED: ${{ github.event_name == 'schedule' && '1' || '0' }}
     steps:
+      - name: Comprobar token de Claude
+        run: |
+          if [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
+            echo "::error::El secreto CLAUDE_CODE_OAUTH_TOKEN no está disponible en este repositorio (Settings > Secrets and variables > Actions > Repository secrets)."
+            exit 1
+          fi
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: {python-version: "3.12", cache: pip}
