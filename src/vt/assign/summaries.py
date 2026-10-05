@@ -3,6 +3,7 @@ rellena solo las asignaciones que aún no tienen resumen (p. ej. cuentas añadid
 import json
 import os
 import shutil
+import subprocess
 from datetime import datetime
 from ..claude.context import build_context
 from ..claude.runner import ClaudeUnavailable, summarize_account
@@ -15,6 +16,20 @@ from .data import load_account_detail, load_scores, top_interest
 def claude_status():
     """Diagnóstico sin revelar secretos."""
     return {"token_configurado": bool(os.environ.get("CLAUDE_CODE_OAUTH_TOKEN")), "cli_instalada": shutil.which("claude") is not None}
+
+
+def selftest():
+    """Prueba mínima de Claude Code con un mensaje sin datos de cuentas; imprime el motivo si falla."""
+    try:
+        v = subprocess.run(["claude", "--version"], capture_output=True, text=True, timeout=60)
+        print("claude --version:", (v.stdout or v.stderr).strip()[:200])
+        p = subprocess.run(["claude", "-p", "Responde solo con la palabra OK", "--output-format", "json"],
+                           capture_output=True, text=True, timeout=120)
+        print("prueba claude: exit", p.returncode)
+        print("stdout:", (p.stdout or "").strip()[:400])
+        print("stderr:", (p.stderr or "").strip()[:400])
+    except Exception as e:  # diagnóstico, nunca debe romper el flujo
+        print("prueba claude: error", type(e).__name__, str(e)[:200])
 
 
 def fill_summaries(conn, draft_id, limit=None):
@@ -52,6 +67,8 @@ def main():
     st = claude_status()
     print("Claude:", "token configurado" if st["token_configurado"] else "SIN token (secreto CLAUDE_CODE_OAUTH_TOKEN no configurado)",
           "| CLI", "instalada" if st["cli_instalada"] else "no instalada")
+    if st["cli_instalada"] and os.environ.get("SCHEDULED") != "1":
+        selftest()
     if os.environ.get("SCHEDULED") == "1" and not forced() and not at_hour("mon", 7):
         print("Fuera de hora (lunes 07:00 Madrid): no se hace nada.")
         return
