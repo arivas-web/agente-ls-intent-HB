@@ -24,6 +24,13 @@ jobs:
             echo "::error::El secreto CLAUDE_CODE_OAUTH_TOKEN no está disponible en este repositorio (Settings > Secrets and variables > Actions > Repository secrets)."
             exit 1
           fi
+      - name: Limpiar token de Claude (quita saltos de línea y espacios al pegarlo)
+        run: |
+          clean="$(printf '%s' "$CLAUDE_CODE_OAUTH_TOKEN" | tr -d '[:space:]')"
+          if [ -n "$clean" ]; then
+            echo "::add-mask::$clean"
+            echo "CLAUDE_CODE_OAUTH_TOKEN=$clean" >> "$GITHUB_ENV"
+          fi
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: {python-version: "3.12", cache: pip}

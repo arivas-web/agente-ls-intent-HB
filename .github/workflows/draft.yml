@@ -22,6 +22,13 @@ jobs:
       FORCE: ${{ inputs.force && '1' || '0' }}
     steps:
       - uses: actions/checkout@v4
+      - name: Limpiar token de Claude (quita saltos de línea y espacios al pegarlo)
+        run: |
+          clean="$(printf '%s' "$CLAUDE_CODE_OAUTH_TOKEN" | tr -d '[:space:]')"
+          if [ -n "$clean" ]; then
+            echo "::add-mask::$clean"
+            echo "CLAUDE_CODE_OAUTH_TOKEN=$clean" >> "$GITHUB_ENV"
+          fi
       - uses: actions/setup-python@v5
         with: {python-version: "3.12", cache: pip}
       - run: pip install -r requirements.txt
