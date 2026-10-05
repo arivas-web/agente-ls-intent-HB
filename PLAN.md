@@ -194,6 +194,6 @@ Para Gmail hay que activar la verificación en dos pasos en la cuenta de envío 
 ## Cambios de modelo posteriores (2026-10-02)
 - Cobertura medida: para los contactos elegibles se capta el 100 % de la actividad de HubSpot; el ~97 % de los clics de email viene de contactos excluidos (clientes, partners, internos).
 - Clics y sesiones se leen ahora de las fechas de su historial (antes se perdía el primer clic/sesión de cada contacto).
-- La respuesta a un email comercial detectada puntúa 10 de intención (config `intent.weights.reply_detected`), pendiente de que exista la clasificación manual de la SDR.
+- La respuesta a un email comercial detectada NO puntúa (config `intent.weights.reply_detected: 0`): es consecuencia de la acción de la SDR y contamina la comparación con el grupo de control. Se sigue registrando.
 - Movimiento = el mayor entre intención y engagement (`priority_matrix.movement: max`), a cero si la intención está congelada.
 - Simulación sobre cuentas elegibles: cuentas con movimiento 7 -> 33.
